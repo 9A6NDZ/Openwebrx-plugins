@@ -280,13 +280,13 @@ Plugins.audio_equalizer._buildUI = function () {
 
   if (Plugins.audio_equalizer._collapsed) body.hide();
 
-  // Insert before Display
-  if (displayHeader && displayHeader.length) {
+  // Insert before Settings (between Controls and Settings)
+  if (settingsHeader && settingsHeader.length) {
+    var ss = settingsHeader.closest('.openwebrx-section');
+    if (ss.length) ss.before(section); else settingsHeader.before(section);
+  } else if (displayHeader && displayHeader.length) {
     var ds = displayHeader.closest('.openwebrx-section');
     if (ds.length) ds.before(section); else displayHeader.before(section);
-  } else if (settingsHeader && settingsHeader.length) {
-    var ss = settingsHeader.closest('.openwebrx-section');
-    if (ss.length) ss.after(section); else settingsHeader.after(section);
   } else {
     panel.append(section);
   }
