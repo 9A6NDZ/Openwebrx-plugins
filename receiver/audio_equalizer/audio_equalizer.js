@@ -144,10 +144,10 @@ Plugins.audio_equalizer._buildUI = function () {
   }
 
   var settingsHeader = null, displayHeader = null;
-  panel.find('div, span, a').each(function () {
+  panel.find('.openwebrx-section-divider, div, span, a').each(function () {
     var txt = $(this).text().trim();
-    if (txt.match(/^[\u25BC\u25B6]?\s*Settings$/i)) settingsHeader = $(this);
-    if (txt.match(/^[\u25BC\u25B6]?\s*Display$/i)) displayHeader = $(this);
+    if (txt.match(/^[\u25BC\u25B6\u25B2]?\s*Settings$/i)) settingsHeader = $(this);
+    if (txt.match(/^[\u25BC\u25B6\u25B2]?\s*Display$/i)) displayHeader = $(this);
   });
 
   // Section wrapper
@@ -156,10 +156,10 @@ Plugins.audio_equalizer._buildUI = function () {
     'class': 'openwebrx-section audio-eq-section',
   });
 
-  // Header — plain text, no spans, exactly like native OWRX+ sections
+  // Header — uses native openwebrx-section-divider class (same as Settings, Display, Controls)
   var header = $('<div>', {
     id: 'audio-eq-section-header',
-    'class': 'openwebrx-section-header',
+    'class': 'openwebrx-section-divider',
     html: (Plugins.audio_equalizer._collapsed ? '&#9654;' : '&#9660;') + ' Equalizer',
   });
 
