@@ -1,0 +1,191 @@
+/*
+ * Audio Equalizer Plugin Styles for OpenWebRX+
+ * Only slider layout and controls — header inherits native theme styles.
+ */
+
+/* ---- Section wrapper ---- */
+.audio-eq-section {
+  position: relative;
+  z-index: 1;
+}
+
+/* ---- Section body ---- */
+.audio-eq-section-body {
+  padding: 3px 5px 5px 5px;
+}
+
+/* ---- Controls row (EQ button, preset, reset) ---- */
+.audio-eq-controls-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.audio-eq-btn {
+  font-size: 10px !important;
+  padding: 2px 7px !important;
+  min-width: auto !important;
+  line-height: 1.4 !important;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.audio-eq-btn.highlighted {
+  background-color: var(--theme-color1, #4A90D9) !important;
+  color: #FFF !important;
+}
+
+.audio-eq-preset-select {
+  background: rgba(0, 0, 0, 0.3);
+  color: #CCC;
+  border: 1px solid var(--theme-color2, rgba(255, 255, 255, 0.2));
+  border-radius: 3px;
+  font-size: 11px;
+  padding: 2px 4px;
+  flex: 1;
+  min-width: 50px;
+}
+.audio-eq-preset-select:focus {
+  outline: none;
+  border-color: var(--theme-color1, #4A90D9);
+}
+.audio-eq-preset-select option {
+  background: #333;
+  color: #CCC;
+}
+
+/* ---- Sliders row ---- */
+.audio-eq-sliders-row {
+  display: flex;
+  justify-content: space-around;
+  align-items: stretch;
+  gap: 1px;
+}
+
+.audio-eq-band-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+/* ---- dB value ---- */
+.audio-eq-db-val {
+  color: var(--theme-color1, #AAA);
+  font-size: 8px;
+  font-family: monospace;
+  text-align: center;
+  height: 12px;
+  line-height: 12px;
+  margin-bottom: 1px;
+  user-select: none;
+}
+
+/* ---- Vertical slider ---- */
+.audio-eq-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 80px;
+  writing-mode: vertical-lr;
+  direction: rtl;
+  background: transparent;
+  cursor: pointer;
+  margin: 0;
+  padding: 0;
+}
+
+.audio-eq-slider.disabled {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+/* Track - Webkit */
+.audio-eq-slider::-webkit-slider-runnable-track {
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(to top,
+    rgba(100, 180, 255, 0.25),
+    rgba(100, 180, 255, 0.12) 45%,
+    rgba(255, 200, 100, 0.12) 55%,
+    rgba(255, 100, 100, 0.25)
+  );
+  border-radius: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Track - Firefox */
+.audio-eq-slider::-moz-range-track {
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(to top,
+    rgba(100, 180, 255, 0.25),
+    rgba(100, 180, 255, 0.12) 45%,
+    rgba(255, 200, 100, 0.12) 55%,
+    rgba(255, 100, 100, 0.25)
+  );
+  border-radius: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Thumb - Webkit */
+.audio-eq-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 8px;
+  background: var(--theme-color1, #4A90D9);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+  cursor: grab;
+  margin-left: -5px;
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+}
+.audio-eq-slider::-webkit-slider-thumb:hover {
+  background: #FFF;
+}
+.audio-eq-slider::-webkit-slider-thumb:active {
+  cursor: grabbing;
+  background: #FFF;
+}
+
+/* Thumb - Firefox */
+.audio-eq-slider::-moz-range-thumb {
+  width: 14px;
+  height: 8px;
+  background: var(--theme-color1, #4A90D9);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+  cursor: grab;
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+}
+.audio-eq-slider::-moz-range-thumb:hover {
+  background: #FFF;
+}
+.audio-eq-slider::-moz-range-thumb:active {
+  cursor: grabbing;
+  background: #FFF;
+}
+
+/* ---- Band label ---- */
+.audio-eq-band-label {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 7px;
+  font-family: monospace;
+  text-align: center;
+  margin-top: 1px;
+  user-select: none;
+  white-space: nowrap;
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 600px) {
+  .audio-eq-slider {
+    height: 60px;
+  }
+  .audio-eq-band-label {
+    font-size: 6px;
+  }
+}
