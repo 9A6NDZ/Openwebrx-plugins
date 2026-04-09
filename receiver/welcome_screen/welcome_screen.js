@@ -3,18 +3,17 @@
 // Author: 9A6NDZ (Zoran)
 // Repository: https://github.com/9A6NDZ/Openwebrx-plugins
 // License: MIT
-// Version: 4
+// Version: 5
 //
-// Fullscreen overlay requiring callsign. Saves to localStorage, fills the
-// chat name input (which OWRX+ sends to the server — visible in admin
-// Settings > Clients), and sends a name announcement via WebSocket.
+// After callsign entry, auto-sends a chat message so the server
+// immediately registers the name in admin Settings > Clients.
 // ============================================================================
 
 (function () {
   'use strict';
 
   Plugins.welcome_screen = {
-    _version: 4,
+    _version: 5,
     no_css: true,
     title:            'Welcome to my OWRX SDR',
     subtitle:         'Please enter your callsign to continue',
@@ -26,6 +25,8 @@
     maxCallLength:    12,
     callsignPattern:  /^[A-Z0-9]{1,3}[0-9][A-Z0-9]{0,4}[A-Z]?$/i,
     showChangeButton: true,
+    // Message sent automatically so server registers the name
+    autoMessage:      'Connected',
   };
 
   if (typeof Plugins.welcome_screen_config === 'object') {
@@ -54,19 +55,10 @@
     return cs;
   }
 
-  // --- Fill callsign into ALL relevant DOM fields ---------------------------
-  //
-  // The chat panel in OWRX+ has an input next to "Message" where the user
-  // types their name/callsign. When a chat message is sent, OWRX+ includes
-  // this name in the WebSocket payload — the server then stores it as the
-  // client's "chat name", visible in admin Settings > Clients.
-  //
-  // We target every possible selector for this field.
+  // --- Fill callsign into chat name + settings fields -----------------------
 
   function fillDOM(cs) {
-    // Chat name field (the input left of "Message" / "Send")
-    // In OWRX+ this is typically the first input in the chat/log panel,
-    // or has specific classes/IDs depending on version.
+    // Chat name input — the field left of "Message" in the log/chat panel
     var chatSelectors = [
       '#openwebrx-panel-log input[type="text"]:first-of-type',
       '#openwebrx-panel-chat input[type="text"]:first-of-type',
@@ -76,83 +68,98 @@
       'input[name="chat-name"]',
       'input[name="callsign"]',
     ];
-
     chatSelectors.forEach(function(sel) {
       try {
-        var els = document.querySelectorAll(sel);
-        els.forEach(function(el) {
-          if (el && (!el.value || el.value.length === 0)) {
-            el.value = cs;
-            el.dispatchEvent(new Event('input', {bubbles: true}));
-            el.dispatchEvent(new Event('change', {bubbles: true}));
-          }
+        document.querySelectorAll(sel).forEach(function(el) {
+          el.value = cs;
+          el.dispatchEvent(new Event('input', {bubbles:true}));
+          el.dispatchEvent(new Event('change', {bubbles:true}));
         });
       } catch(e) {}
     });
 
-    // Settings callsign field
-    var settingsSelectors = [
-      '#openwebrx-settings-callsign',
-      '.settings-container input[name="callsign"]',
-    ];
-
-    settingsSelectors.forEach(function(sel) {
+    // Settings callsign
+    ['#openwebrx-settings-callsign', '.settings-container input[name="callsign"]'].forEach(function(sel) {
       try {
-        var els = document.querySelectorAll(sel);
-        els.forEach(function(el) {
-          if (el && (!el.value || el.value.length === 0)) {
+        document.querySelectorAll(sel).forEach(function(el) {
+          if (!el.value) {
             el.value = cs;
-            el.dispatchEvent(new Event('change', {bubbles: true}));
+            el.dispatchEvent(new Event('change', {bubbles:true}));
           }
         });
       } catch(e) {}
     });
   }
 
-  // --- Send callsign to server via WebSocket --------------------------------
+  // --- Auto-send a chat message so server registers the name ----------------
   //
-  // OWRX+ uses a global WebSocket connection. When the chat panel sends a
-  // message, it sends JSON like: {"type":"chat","name":"CALL","message":"..."}
-  // The server stores the name for client identification.
-  //
-  // We send an empty chat-name announcement so the server immediately knows
-  // who this client is, even before they type a chat message.
+  // OWRX+ chat panel: [Name input] [Message input] [Send button]
+  // The server only learns the client's name when a chat message is sent.
+  // We fill the name, put a short message, and click Send programmatically.
 
-  function sendNameToServer(cs) {
-    // Try multiple ways to find the OWRX+ WebSocket
-    var ws = null;
+  function autoSendChat(cs, attempt) {
+    attempt = attempt || 0;
+    if (attempt > 15) return; // give up after ~30s
 
-    // Method 1: OWRX+ stores ws in a global variable
-    if (typeof owrx_ws !== 'undefined' && owrx_ws && owrx_ws.readyState === 1) {
-      ws = owrx_ws;
+    // Find all text inputs in the log/chat panel area
+    var panel = document.getElementById('openwebrx-panel-log') ||
+                document.getElementById('openwebrx-panel-chat') ||
+                document.querySelector('.openwebrx-panel-chat') ||
+                document.querySelector('[id*="panel-log"]') ||
+                document.querySelector('[id*="panel-chat"]');
+
+    if (!panel) {
+      setTimeout(function() { autoSendChat(cs, attempt + 1); }, 2000);
+      return;
     }
 
-    // Method 2: Check common OWRX+ global references
-    if (!ws && typeof Openwebrx !== 'undefined' && Openwebrx.ws && Openwebrx.ws.readyState === 1) {
-      ws = Openwebrx.ws;
-    }
+    var inputs = panel.querySelectorAll('input[type="text"]');
+    var sendBtn = panel.querySelector('button') ||
+                  panel.querySelector('input[type="submit"]') ||
+                  panel.querySelector('[onclick*="send"]');
 
-    // Method 3: Try the connection object
-    if (!ws && typeof connection !== 'undefined' && connection && connection.readyState === 1) {
-      ws = connection;
-    }
+    // We need at least a name input and a message input + send button
+    // Typical layout: inputs[0] = name, inputs[1] = message
+    if (inputs.length >= 2 && sendBtn) {
+      // Fill name
+      inputs[0].value = cs;
+      inputs[0].dispatchEvent(new Event('input', {bubbles:true}));
+      inputs[0].dispatchEvent(new Event('change', {bubbles:true}));
 
-    if (ws) {
-      try {
-        // Send a name-only message — OWRX+ server picks up the name
-        // for the Clients list in admin Settings
-        ws.send(JSON.stringify({type: 'name', value: cs}));
-        console.log('[welcome_screen] Sent name to server via WebSocket:', cs);
-      } catch(e) {
-        console.warn('[welcome_screen] WebSocket send failed:', e);
+      // Fill message
+      inputs[1].value = CFG.autoMessage;
+      inputs[1].dispatchEvent(new Event('input', {bubbles:true}));
+      inputs[1].dispatchEvent(new Event('change', {bubbles:true}));
+
+      // Click send
+      setTimeout(function() {
+        sendBtn.click();
+        console.log('[welcome_screen] Auto-sent chat message as:', cs);
+      }, 500);
+
+    } else if (inputs.length >= 1 && sendBtn) {
+      // Some versions: single input for message, name is separate
+      // Try filling the first input as name if it looks like a name field
+      // (placeholder contains 'name' or 'call' or field is short)
+      inputs[0].value = cs;
+      inputs[0].dispatchEvent(new Event('input', {bubbles:true}));
+      inputs[0].dispatchEvent(new Event('change', {bubbles:true}));
+
+      // If there's a message input somewhere else
+      var msgInput = panel.querySelector('input[placeholder*="essage"]') ||
+                     panel.querySelector('input[placeholder*="Message"]');
+      if (msgInput) {
+        msgInput.value = CFG.autoMessage;
+        msgInput.dispatchEvent(new Event('input', {bubbles:true}));
+        setTimeout(function() { sendBtn.click(); }, 500);
       }
     } else {
-      // WebSocket not ready yet — try again shortly
-      setTimeout(function() { sendNameToServer(cs); }, 2000);
+      // Panel not fully rendered yet
+      setTimeout(function() { autoSendChat(cs, attempt + 1); }, 2000);
     }
   }
 
-  // --- MutationObserver to catch late-rendered panels -----------------------
+  // --- MutationObserver -----------------------------------------------------
 
   function watchFill(cs) {
     var obs = new MutationObserver(function() { fillDOM(cs); });
@@ -160,7 +167,7 @@
     setTimeout(function() { obs.disconnect(); }, 30000);
   }
 
-  // --- Build overlay --------------------------------------------------------
+  // --- Overlay --------------------------------------------------------------
 
   function showOverlay() {
     if (document.getElementById('welcomeOverlay')) return;
@@ -239,7 +246,6 @@
     }
 
     btn.addEventListener('click', submit);
-
     input.addEventListener('keydown', function(e) {
       if (e.key.length === 1 && /[a-z]/.test(e.key)) {
         e.preventDefault();
@@ -253,14 +259,15 @@
     setTimeout(function() { input.focus(); }, 300);
   }
 
-  // --- Activate: fill DOM + send to server + badge --------------------------
+  // --- Activate -------------------------------------------------------------
 
   function activate(cs) {
     fillDOM(cs);
     watchFill(cs);
-    sendNameToServer(cs);
+    // Auto-send a chat message so server registers name immediately
+    autoSendChat(cs);
     if (CFG.showChangeButton) addBadge(cs);
-    console.log('[welcome_screen] Activated callsign:', cs);
+    console.log('[welcome_screen] Activated:', cs);
   }
 
   // --- Badge ----------------------------------------------------------------
@@ -308,7 +315,6 @@
   function init() {
     if (_done) return true;
     _done = true;
-
     var saved = getSaved();
     if (saved && saved.length >= CFG.minCallLength) {
       activate(saved);
@@ -325,5 +331,4 @@
   }
 
   Plugins.welcome_screen.init = init;
-
 })();
