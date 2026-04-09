@@ -1,240 +1,249 @@
 /* ============================================================================
-   Welcome Screen Plugin — Styles
+   Welcome Screen Plugin v2 — Styles
    Author: 9A6NDZ (Zoran)
+   
+   KEY FIX: The overlay now uses position:fixed + z-index:999999 to sit 
+   above ALL OpenWebRX elements (waterfall, panels, chat, status bar).
    ============================================================================ */
 
-/* --- Overlay ---------------------------------------------------------------- */
+/* --- Full-screen overlay — COVERS EVERYTHING ------------------------------ */
 
-#welcome-screen-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 99999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: radial-gradient(ellipse at 50% 40%, #0a1628 0%, #000 100%);
+#ws-overlay {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 999999 !important;          /* above all OWRX panels/waterfall */
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: rgba(4, 10, 20, 0.97) !important;
   opacity: 0;
-  transition: opacity 0.35s ease;
+  transition: opacity 0.4s ease;
+  /* Block all interaction behind */
+  pointer-events: all !important;
 }
 
-#welcome-screen-overlay.visible {
+#ws-overlay.ws-visible {
   opacity: 1;
 }
 
-#welcome-screen-overlay.fade-out {
+#ws-overlay.ws-out {
   opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.4s ease;
+  pointer-events: none !important;
+  transition: opacity 0.45s ease;
 }
 
-/* Animated radio-wave rings in the background */
-#welcome-screen-overlay::before,
-#welcome-screen-overlay::after {
+/* Animated radio-wave rings */
+#ws-overlay::before,
+#ws-overlay::after {
   content: '';
   position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.5);
   border-radius: 50%;
-  border: 1px solid rgba(0, 180, 255, 0.08);
+  border: 1px solid rgba(0, 180, 255, 0.07);
   pointer-events: none;
-  animation: ws-pulse 6s ease-out infinite;
+  animation: ws-ring 7s ease-out infinite;
 }
 
-#welcome-screen-overlay::before {
-  width: 600px; height: 600px;
-  animation-delay: 0s;
+#ws-overlay::before {
+  width: 500px; height: 500px;
 }
 
-#welcome-screen-overlay::after {
-  width: 900px; height: 900px;
-  animation-delay: 2s;
+#ws-overlay::after {
+  width: 800px; height: 800px;
+  animation-delay: 2.5s;
 }
 
-@keyframes ws-pulse {
-  0%   { transform: scale(0.5); opacity: 0.6; }
-  100% { transform: scale(1.8); opacity: 0; }
+@keyframes ws-ring {
+  0%   { transform: translate(-50%, -50%) scale(0.4); opacity: 0.5; }
+  100% { transform: translate(-50%, -50%) scale(2);   opacity: 0; }
 }
 
-/* --- Card ------------------------------------------------------------------- */
+/* --- Card ----------------------------------------------------------------- */
 
-.welcome-screen-card {
+#ws-card {
   position: relative;
+  z-index: 2;
   width: 90%;
-  max-width: 440px;
-  padding: 40px 32px 32px;
-  background: rgba(12, 24, 48, 0.92);
-  border: 1px solid rgba(0, 180, 255, 0.25);
+  max-width: 420px;
+  padding: 44px 32px 32px;
+  background: rgba(8, 18, 38, 0.95);
+  border: 1px solid rgba(0, 160, 255, 0.25);
   border-radius: 16px;
   box-shadow:
-    0 0 40px rgba(0, 120, 255, 0.12),
-    0 0 80px rgba(0, 80, 200, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(12px);
+    0 0 60px rgba(0, 100, 220, 0.15),
+    0 0 120px rgba(0, 60, 160, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
   text-align: center;
-  color: #c8daf0;
-  animation: ws-card-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-  transform: translateY(30px) scale(0.96);
+  color: #c0d4ea;
+  animation: ws-card-pop 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  transform: translateY(24px) scale(0.95);
   opacity: 0;
 }
 
-@keyframes ws-card-in {
+@keyframes ws-card-pop {
   to { transform: translateY(0) scale(1); opacity: 1; }
 }
 
-/* --- Logo / Icon ------------------------------------------------------------ */
+/* --- Icon ----------------------------------------------------------------- */
 
-.welcome-screen-logo {
+#ws-icon {
   color: #00b4ff;
-  margin-bottom: 16px;
-  filter: drop-shadow(0 0 8px rgba(0, 180, 255, 0.4));
+  margin-bottom: 18px;
+  filter: drop-shadow(0 0 10px rgba(0, 180, 255, 0.45));
 }
 
-/* --- Title & subtitle ------------------------------------------------------- */
+/* --- Title & subtitle ----------------------------------------------------- */
 
-.welcome-screen-title {
+#ws-title {
   margin: 0 0 8px;
-  font-size: 1.5rem;
+  font-size: 1.55rem;
   font-weight: 700;
   letter-spacing: 0.03em;
   color: #fff;
-  text-shadow: 0 0 12px rgba(0, 180, 255, 0.3);
+  text-shadow: 0 0 16px rgba(0, 180, 255, 0.25);
 }
 
-.welcome-screen-subtitle {
-  margin: 0 0 28px;
+#ws-sub {
+  margin: 0 0 30px;
   font-size: 0.92rem;
-  color: #7ea0c4;
+  color: #6a96be;
 }
 
-/* --- Form row --------------------------------------------------------------- */
+/* --- Form ----------------------------------------------------------------- */
 
-.welcome-screen-form {
+#ws-form {
   display: flex;
   gap: 10px;
   justify-content: center;
 }
 
-.welcome-screen-input {
+#ws-input {
   flex: 1;
   min-width: 0;
-  padding: 12px 16px;
-  font-size: 1.05rem;
+  padding: 13px 16px;
+  font-size: 1.1rem;
   font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: #fff;
-  background: rgba(0, 20, 50, 0.6);
-  border: 1px solid rgba(0, 180, 255, 0.3);
+  background: rgba(0, 16, 40, 0.7);
+  border: 1px solid rgba(0, 160, 255, 0.3);
   border-radius: 8px;
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-.welcome-screen-input::placeholder {
-  color: #3a6080;
+#ws-input::placeholder {
+  color: #2e5575;
   text-transform: none;
   letter-spacing: 0.02em;
+  font-size: 0.95rem;
 }
 
-.welcome-screen-input:focus {
+#ws-input:focus {
   border-color: #00b4ff;
-  box-shadow: 0 0 0 3px rgba(0, 180, 255, 0.18), 0 0 20px rgba(0, 140, 255, 0.1);
+  box-shadow: 0 0 0 3px rgba(0, 180, 255, 0.18), 0 0 24px rgba(0, 120, 255, 0.1);
 }
 
-.welcome-screen-btn {
-  padding: 12px 24px;
+#ws-btn {
+  padding: 13px 26px;
   font-size: 0.95rem;
   font-weight: 600;
   white-space: nowrap;
   color: #fff;
-  background: linear-gradient(135deg, #006aff 0%, #0094ff 100%);
+  background: linear-gradient(135deg, #0060e0 0%, #0090ff 100%);
   border: none;
   border-radius: 8px;
   cursor: pointer;
   transition: transform 0.15s, box-shadow 0.2s, background 0.2s;
 }
 
-.welcome-screen-btn:hover {
-  background: linear-gradient(135deg, #0080ff 0%, #00aaff 100%);
-  box-shadow: 0 4px 20px rgba(0, 120, 255, 0.35);
+#ws-btn:hover {
+  background: linear-gradient(135deg, #0078ff 0%, #00a8ff 100%);
+  box-shadow: 0 4px 24px rgba(0, 110, 255, 0.35);
   transform: translateY(-1px);
 }
 
-.welcome-screen-btn:active {
+#ws-btn:active {
   transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(0, 120, 255, 0.25);
 }
 
-/* --- Error ------------------------------------------------------------------ */
+/* --- Error ---------------------------------------------------------------- */
 
-.welcome-screen-error {
+#ws-err {
   min-height: 1.2em;
   margin: 14px 0 0;
-  font-size: 0.85rem;
-  color: #ff5c5c;
+  font-size: 0.84rem;
+  color: #ff5555;
 }
 
-/* --- "Change callsign" floating badge --------------------------------------- */
+/* --- Change-callsign badge ------------------------------------------------ */
 
-#welcome-screen-change-wrap {
+#ws-badge {
   position: fixed;
   top: 8px;
   right: 60px;
-  z-index: 9999;
+  z-index: 99999;
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 4px 10px 4px 12px;
   font-size: 0.78rem;
   font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
-  color: #a0c4e8;
-  background: rgba(10, 20, 40, 0.85);
-  border: 1px solid rgba(0, 180, 255, 0.2);
+  color: #90b8d8;
+  background: rgba(6, 14, 30, 0.88);
+  border: 1px solid rgba(0, 160, 255, 0.2);
   border-radius: 20px;
   backdrop-filter: blur(6px);
   cursor: default;
   user-select: none;
-  transition: opacity 0.3s;
 }
 
-.welcome-screen-change-label {
-  letter-spacing: 0.08em;
+#ws-badge-call {
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: #00b4ff;
   font-weight: 600;
 }
 
-.welcome-screen-change-btn {
+#ws-badge-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 22px;
   height: 22px;
   font-size: 0.85rem;
-  color: #7ea0c4;
-  background: rgba(0, 100, 200, 0.15);
-  border: 1px solid rgba(0, 180, 255, 0.15);
+  color: #6a96be;
+  background: rgba(0, 80, 180, 0.15);
+  border: 1px solid rgba(0, 160, 255, 0.15);
   border-radius: 50%;
   cursor: pointer;
   transition: color 0.2s, background 0.2s;
 }
 
-.welcome-screen-change-btn:hover {
+#ws-badge-btn:hover {
   color: #fff;
-  background: rgba(0, 120, 255, 0.3);
+  background: rgba(0, 110, 255, 0.3);
 }
 
-/* --- Responsive ------------------------------------------------------------- */
+/* --- Mobile --------------------------------------------------------------- */
 
 @media (max-width: 480px) {
-  .welcome-screen-card {
-    padding: 28px 18px 24px;
+  #ws-card {
+    padding: 30px 18px 24px;
   }
-  .welcome-screen-form {
+  #ws-form {
     flex-direction: column;
   }
-  .welcome-screen-title {
+  #ws-title {
     font-size: 1.25rem;
   }
-  #welcome-screen-change-wrap {
+  #ws-badge {
     right: 8px;
     top: auto;
     bottom: 8px;
