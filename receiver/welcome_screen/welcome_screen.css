@@ -1,0 +1,242 @@
+/* ============================================================================
+   Welcome Screen Plugin — Styles
+   Author: 9A6NDZ (Zoran)
+   ============================================================================ */
+
+/* --- Overlay ---------------------------------------------------------------- */
+
+#welcome-screen-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at 50% 40%, #0a1628 0%, #000 100%);
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+
+#welcome-screen-overlay.visible {
+  opacity: 1;
+}
+
+#welcome-screen-overlay.fade-out {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+
+/* Animated radio-wave rings in the background */
+#welcome-screen-overlay::before,
+#welcome-screen-overlay::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 180, 255, 0.08);
+  pointer-events: none;
+  animation: ws-pulse 6s ease-out infinite;
+}
+
+#welcome-screen-overlay::before {
+  width: 600px; height: 600px;
+  animation-delay: 0s;
+}
+
+#welcome-screen-overlay::after {
+  width: 900px; height: 900px;
+  animation-delay: 2s;
+}
+
+@keyframes ws-pulse {
+  0%   { transform: scale(0.5); opacity: 0.6; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+
+/* --- Card ------------------------------------------------------------------- */
+
+.welcome-screen-card {
+  position: relative;
+  width: 90%;
+  max-width: 440px;
+  padding: 40px 32px 32px;
+  background: rgba(12, 24, 48, 0.92);
+  border: 1px solid rgba(0, 180, 255, 0.25);
+  border-radius: 16px;
+  box-shadow:
+    0 0 40px rgba(0, 120, 255, 0.12),
+    0 0 80px rgba(0, 80, 200, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(12px);
+  text-align: center;
+  color: #c8daf0;
+  animation: ws-card-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  transform: translateY(30px) scale(0.96);
+  opacity: 0;
+}
+
+@keyframes ws-card-in {
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+/* --- Logo / Icon ------------------------------------------------------------ */
+
+.welcome-screen-logo {
+  color: #00b4ff;
+  margin-bottom: 16px;
+  filter: drop-shadow(0 0 8px rgba(0, 180, 255, 0.4));
+}
+
+/* --- Title & subtitle ------------------------------------------------------- */
+
+.welcome-screen-title {
+  margin: 0 0 8px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: #fff;
+  text-shadow: 0 0 12px rgba(0, 180, 255, 0.3);
+}
+
+.welcome-screen-subtitle {
+  margin: 0 0 28px;
+  font-size: 0.92rem;
+  color: #7ea0c4;
+}
+
+/* --- Form row --------------------------------------------------------------- */
+
+.welcome-screen-form {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.welcome-screen-input {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 16px;
+  font-size: 1.05rem;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #fff;
+  background: rgba(0, 20, 50, 0.6);
+  border: 1px solid rgba(0, 180, 255, 0.3);
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.welcome-screen-input::placeholder {
+  color: #3a6080;
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+
+.welcome-screen-input:focus {
+  border-color: #00b4ff;
+  box-shadow: 0 0 0 3px rgba(0, 180, 255, 0.18), 0 0 20px rgba(0, 140, 255, 0.1);
+}
+
+.welcome-screen-btn {
+  padding: 12px 24px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: #fff;
+  background: linear-gradient(135deg, #006aff 0%, #0094ff 100%);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.2s, background 0.2s;
+}
+
+.welcome-screen-btn:hover {
+  background: linear-gradient(135deg, #0080ff 0%, #00aaff 100%);
+  box-shadow: 0 4px 20px rgba(0, 120, 255, 0.35);
+  transform: translateY(-1px);
+}
+
+.welcome-screen-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(0, 120, 255, 0.25);
+}
+
+/* --- Error ------------------------------------------------------------------ */
+
+.welcome-screen-error {
+  min-height: 1.2em;
+  margin: 14px 0 0;
+  font-size: 0.85rem;
+  color: #ff5c5c;
+}
+
+/* --- "Change callsign" floating badge --------------------------------------- */
+
+#welcome-screen-change-wrap {
+  position: fixed;
+  top: 8px;
+  right: 60px;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 12px;
+  font-size: 0.78rem;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  color: #a0c4e8;
+  background: rgba(10, 20, 40, 0.85);
+  border: 1px solid rgba(0, 180, 255, 0.2);
+  border-radius: 20px;
+  backdrop-filter: blur(6px);
+  cursor: default;
+  user-select: none;
+  transition: opacity 0.3s;
+}
+
+.welcome-screen-change-label {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #00b4ff;
+  font-weight: 600;
+}
+
+.welcome-screen-change-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  font-size: 0.85rem;
+  color: #7ea0c4;
+  background: rgba(0, 100, 200, 0.15);
+  border: 1px solid rgba(0, 180, 255, 0.15);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s;
+}
+
+.welcome-screen-change-btn:hover {
+  color: #fff;
+  background: rgba(0, 120, 255, 0.3);
+}
+
+/* --- Responsive ------------------------------------------------------------- */
+
+@media (max-width: 480px) {
+  .welcome-screen-card {
+    padding: 28px 18px 24px;
+  }
+  .welcome-screen-form {
+    flex-direction: column;
+  }
+  .welcome-screen-title {
+    font-size: 1.25rem;
+  }
+  #welcome-screen-change-wrap {
+    right: 8px;
+    top: auto;
+    bottom: 8px;
+  }
+}
