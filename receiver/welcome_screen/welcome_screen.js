@@ -3,18 +3,19 @@
 // Author: 9A6NDZ (Zoran)
 // Repository: https://github.com/9A6NDZ/Openwebrx-plugins
 // License: MIT
-// Version: 3
+// Version: 4
 //
-// Simple fullscreen overlay with callsign input.
-// Callsign is saved to localStorage and auto-fills Settings + Chat fields.
+// Fullscreen overlay requiring callsign. Saves to localStorage, fills the
+// chat name input (which OWRX+ sends to the server — visible in admin
+// Settings > Clients), and sends a name announcement via WebSocket.
 // ============================================================================
 
 (function () {
   'use strict';
 
   Plugins.welcome_screen = {
-    _version: 3,
-    no_css: true,  // no external CSS file — everything is inline
+    _version: 4,
+    no_css: true,
     title:            'Welcome to my OWRX SDR',
     subtitle:         'Please enter your callsign to continue',
     placeholder:      'Your callsign',
@@ -34,7 +35,7 @@
   var CFG = Plugins.welcome_screen;
   var _done = false;
 
-  // --- localStorage helpers ------------------------------------------------
+  // --- localStorage ---------------------------------------------------------
 
   function getSaved() {
     try { return localStorage.getItem(CFG.storageKey) || ''; } catch(e) { return ''; }
@@ -53,25 +54,113 @@
     return cs;
   }
 
-  // --- Fill callsign into Settings + Chat fields ---------------------------
+  // --- Fill callsign into ALL relevant DOM fields ---------------------------
+  //
+  // The chat panel in OWRX+ has an input next to "Message" where the user
+  // types their name/callsign. When a chat message is sent, OWRX+ includes
+  // this name in the WebSocket payload — the server then stores it as the
+  // client's "chat name", visible in admin Settings > Clients.
+  //
+  // We target every possible selector for this field.
 
   function fillDOM(cs) {
-    document.querySelectorAll(
-      '#openwebrx-settings-callsign, input[name="callsign"], .settings-container input[name="callsign"]'
-    ).forEach(function(el) {
-      if (!el.value) { el.value = cs; el.dispatchEvent(new Event('change', {bubbles:true})); }
+    // Chat name field (the input left of "Message" / "Send")
+    // In OWRX+ this is typically the first input in the chat/log panel,
+    // or has specific classes/IDs depending on version.
+    var chatSelectors = [
+      '#openwebrx-panel-log input[type="text"]:first-of-type',
+      '#openwebrx-panel-chat input[type="text"]:first-of-type',
+      '.openwebrx-panel-chat input[type="text"]:first-of-type',
+      '#openwebrx-chat-name',
+      'input.chat-name',
+      'input[name="chat-name"]',
+      'input[name="callsign"]',
+    ];
+
+    chatSelectors.forEach(function(sel) {
+      try {
+        var els = document.querySelectorAll(sel);
+        els.forEach(function(el) {
+          if (el && (!el.value || el.value.length === 0)) {
+            el.value = cs;
+            el.dispatchEvent(new Event('input', {bubbles: true}));
+            el.dispatchEvent(new Event('change', {bubbles: true}));
+          }
+        });
+      } catch(e) {}
     });
-    var ch = document.querySelector('#openwebrx-chat-name') || document.querySelector('input.chat-name');
-    if (ch && !ch.value) { ch.value = cs; ch.dispatchEvent(new Event('change', {bubbles:true})); }
+
+    // Settings callsign field
+    var settingsSelectors = [
+      '#openwebrx-settings-callsign',
+      '.settings-container input[name="callsign"]',
+    ];
+
+    settingsSelectors.forEach(function(sel) {
+      try {
+        var els = document.querySelectorAll(sel);
+        els.forEach(function(el) {
+          if (el && (!el.value || el.value.length === 0)) {
+            el.value = cs;
+            el.dispatchEvent(new Event('change', {bubbles: true}));
+          }
+        });
+      } catch(e) {}
+    });
   }
+
+  // --- Send callsign to server via WebSocket --------------------------------
+  //
+  // OWRX+ uses a global WebSocket connection. When the chat panel sends a
+  // message, it sends JSON like: {"type":"chat","name":"CALL","message":"..."}
+  // The server stores the name for client identification.
+  //
+  // We send an empty chat-name announcement so the server immediately knows
+  // who this client is, even before they type a chat message.
+
+  function sendNameToServer(cs) {
+    // Try multiple ways to find the OWRX+ WebSocket
+    var ws = null;
+
+    // Method 1: OWRX+ stores ws in a global variable
+    if (typeof owrx_ws !== 'undefined' && owrx_ws && owrx_ws.readyState === 1) {
+      ws = owrx_ws;
+    }
+
+    // Method 2: Check common OWRX+ global references
+    if (!ws && typeof Openwebrx !== 'undefined' && Openwebrx.ws && Openwebrx.ws.readyState === 1) {
+      ws = Openwebrx.ws;
+    }
+
+    // Method 3: Try the connection object
+    if (!ws && typeof connection !== 'undefined' && connection && connection.readyState === 1) {
+      ws = connection;
+    }
+
+    if (ws) {
+      try {
+        // Send a name-only message — OWRX+ server picks up the name
+        // for the Clients list in admin Settings
+        ws.send(JSON.stringify({type: 'name', value: cs}));
+        console.log('[welcome_screen] Sent name to server via WebSocket:', cs);
+      } catch(e) {
+        console.warn('[welcome_screen] WebSocket send failed:', e);
+      }
+    } else {
+      // WebSocket not ready yet — try again shortly
+      setTimeout(function() { sendNameToServer(cs); }, 2000);
+    }
+  }
+
+  // --- MutationObserver to catch late-rendered panels -----------------------
 
   function watchFill(cs) {
     var obs = new MutationObserver(function() { fillDOM(cs); });
     obs.observe(document.body, {childList:true, subtree:true});
-    setTimeout(function() { obs.disconnect(); }, 20000);
+    setTimeout(function() { obs.disconnect(); }, 30000);
   }
 
-  // --- Build the overlay ---------------------------------------------------
+  // --- Build overlay --------------------------------------------------------
 
   function showOverlay() {
     if (document.getElementById('welcomeOverlay')) return;
@@ -88,17 +177,14 @@
     var box = document.createElement('div');
     box.style.cssText = 'max-width:500px; width:90%;';
 
-    // Title
     var h2 = document.createElement('h2');
     h2.textContent = CFG.title;
     h2.style.cssText = 'margin:0 0 10px; font-size:32px; color:#ffae00;';
 
-    // Subtitle
     var p = document.createElement('p');
     p.textContent = CFG.subtitle;
     p.style.cssText = 'margin:0 0 30px; font-size:18px; color:#cc8800; line-height:1.5;';
 
-    // Input
     var input = document.createElement('input');
     input.type = 'text';
     input.id = 'ws-callsign-input';
@@ -114,12 +200,10 @@
       'color:#fff; background:rgba(0,0,40,0.8);' +
       'border:2px solid #ffae00; border-radius:8px; outline:none;';
 
-    // Error
     var err = document.createElement('p');
     err.id = 'ws-callsign-err';
     err.style.cssText = 'min-height:1.2em; margin:0 0 10px; font-size:14px; color:#ff4444;';
 
-    // Button
     var btn = document.createElement('button');
     btn.type = 'button';
     btn.textContent = CFG.buttonText;
@@ -137,38 +221,26 @@
     ov.appendChild(box);
     document.body.appendChild(ov);
 
-    // --- Events ---
-
     function submit() {
       var val = input.value.trim().toUpperCase();
       err.textContent = '';
-
       if (val.length < CFG.minCallLength) {
         err.textContent = 'Callsign too short (min ' + CFG.minCallLength + ' characters)';
-        input.focus();
-        return;
+        input.focus(); return;
       }
       if (!CFG.callsignPattern.test(val)) {
         err.textContent = 'Invalid callsign format';
-        input.focus();
-        return;
+        input.focus(); return;
       }
-
       var cs = save(val);
-      // Hide overlay
       ov.style.display = 'none';
       ov.remove();
-      // Fill fields
-      fillDOM(cs);
-      watchFill(cs);
-      if (CFG.showChangeButton) addBadge(cs);
-      console.log('[welcome_screen] Callsign set:', cs);
+      activate(cs);
     }
 
     btn.addEventListener('click', submit);
 
     input.addEventListener('keydown', function(e) {
-      // Auto uppercase
       if (e.key.length === 1 && /[a-z]/.test(e.key)) {
         e.preventDefault();
         var pos = input.selectionStart;
@@ -178,15 +250,23 @@
       if (e.key === 'Enter') submit();
     });
 
-    // Focus
     setTimeout(function() { input.focus(); }, 300);
   }
 
-  // --- Small "change callsign" badge ---------------------------------------
+  // --- Activate: fill DOM + send to server + badge --------------------------
+
+  function activate(cs) {
+    fillDOM(cs);
+    watchFill(cs);
+    sendNameToServer(cs);
+    if (CFG.showChangeButton) addBadge(cs);
+    console.log('[welcome_screen] Activated callsign:', cs);
+  }
+
+  // --- Badge ----------------------------------------------------------------
 
   function addBadge(cs) {
     if (document.getElementById('ws-badge')) return;
-
     var b = document.createElement('div');
     b.id = 'ws-badge';
     b.style.cssText =
@@ -223,7 +303,7 @@
     document.body.appendChild(b);
   }
 
-  // --- Init ----------------------------------------------------------------
+  // --- Init -----------------------------------------------------------------
 
   function init() {
     if (_done) return true;
@@ -231,13 +311,8 @@
 
     var saved = getSaved();
     if (saved && saved.length >= CFG.minCallLength) {
-      // Returning user — no overlay
-      fillDOM(saved);
-      watchFill(saved);
-      if (CFG.showChangeButton) addBadge(saved);
-      console.log('[welcome_screen] Returning user:', saved);
+      activate(saved);
     } else {
-      // New user — show overlay
       showOverlay();
     }
     return true;

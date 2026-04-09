@@ -1,36 +1,22 @@
 # Welcome Screen Plugin for OpenWebRX+
 
-**Author:** 9A6NDZ (Zoran)  
-**Version:** 3.0  
-**License:** MIT  
+**Author:** 9A6NDZ (Zoran) | **Version:** 4.0 | **License:** MIT
 
----
+## What it does
 
-## Description
-
-Simple fullscreen welcome overlay (like SDR Košutnjak style) that blocks the SDR until the visitor enters their callsign. No external CSS file — all styles are inline.
+1. Shows a fullscreen overlay blocking the SDR until the visitor enters their callsign
+2. Saves callsign to `localStorage` — returning users skip the overlay
+3. **Auto-fills the Chat name field** — this is what OWRX+ sends to the server, so the callsign appears in **admin Settings > Clients**
+4. Sends a name announcement via WebSocket so the server knows the client immediately
+5. Also fills the Settings callsign field
+6. Shows a small badge with option to change callsign
 
 ## Installation
-
-### Remote (from GitHub Pages)
 
 In your `init.js`:
 
 ```javascript
 await Plugins.load('https://9a6ndz.github.io/Openwebrx-plugins/receiver/welcome_screen/welcome_screen.js');
-```
-
-### Local
-
-```bash
-export OWRX_FOLDER=$(dirname "$(find / -name openwebrx.js 2>/dev/null | head -n1)")
-mkdir -p "$OWRX_FOLDER/plugins/receiver/welcome_screen"
-cp welcome_screen.js "$OWRX_FOLDER/plugins/receiver/welcome_screen/"
-```
-
-In `init.js`:
-```javascript
-await Plugins.load('welcome_screen');
 ```
 
 ## Configuration
@@ -44,11 +30,11 @@ Plugins.welcome_screen_config = {
 await Plugins.load('welcome_screen');
 ```
 
-## Files
+## Single file — no CSS needed
 
 ```
 welcome_screen/
-└── welcome_screen.js    (single file — no CSS needed)
+└── welcome_screen.js
 ```
 
 73 de 9A6NDZ!
