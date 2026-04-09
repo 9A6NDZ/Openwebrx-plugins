@@ -156,18 +156,12 @@ Plugins.audio_equalizer._buildUI = function () {
     'class': 'openwebrx-section audio-eq-section',
   });
 
-  // Header — uses ONLY native openwebrx-section-header class
+  // Header — plain text, no spans, exactly like native OWRX+ sections
   var header = $('<div>', {
     id: 'audio-eq-section-header',
     'class': 'openwebrx-section-header',
+    html: (Plugins.audio_equalizer._collapsed ? '&#9654;' : '&#9660;') + ' Equalizer',
   });
-
-  var arrow = $('<span>', {
-    html: Plugins.audio_equalizer._collapsed ? '&#9654;' : '&#9660;',
-  });
-
-  var titleText = $('<span>', { text: ' Equalizer' });
-  header.append(arrow, titleText);
 
   // Body
   var body = $('<div>', {
@@ -276,10 +270,10 @@ Plugins.audio_equalizer._buildUI = function () {
     Plugins.audio_equalizer._collapsed = !Plugins.audio_equalizer._collapsed;
     if (Plugins.audio_equalizer._collapsed) {
       body.slideUp(200);
-      arrow.html('&#9654;');
+      header.html('&#9654; Equalizer');
     } else {
       body.slideDown(200);
-      arrow.html('&#9660;');
+      header.html('&#9660; Equalizer');
     }
     Plugins.audio_equalizer._saveSettings();
   });
@@ -316,10 +310,10 @@ Plugins.audio_equalizer._buildUI = function () {
     Plugins.audio_equalizer._collapsed = saved.collapsed !== false;
     if (Plugins.audio_equalizer._collapsed) {
       body.hide();
-      arrow.html('&#9654;');
+      header.html('&#9654; Equalizer');
     } else {
       body.show();
-      arrow.html('&#9660;');
+      header.html('&#9660; Equalizer');
     }
   }
 };
