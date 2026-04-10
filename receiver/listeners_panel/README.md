@@ -1,15 +1,15 @@
 # Listeners Panel Plugin for OpenWebRX+
 
-A headphone icon plugin for OpenWebRX+ that shows a table of active listeners with their chat names and tuned frequencies. No IP addresses displayed — privacy first!
+A headphone icon in the main navbar that shows active listeners with their chat names and real-time tuned frequencies. No IP addresses — privacy first!
 
 ![OpenWebRX+](https://img.shields.io/badge/OpenWebRX+-Plugin-blue) ![License](https://img.shields.io/badge/License-MIT-green)
 
 ## What it does
 
-Adds a 🎧 headphone icon to the OpenWebRX+ top bar. Clicking it opens a floating panel showing all active listeners:
+Adds a 🎧 **Listeners** button to the main navbar (next to Help), matching the existing OWRX+ button style. Clicking it opens a dropdown panel showing:
 
-- **Name / nickname** — picked up from chat messages
-- **Exact frequency** — the frequency each user is currently tuned to
+- **Name / nickname** — from chat messages
+- **Exact frequency** — read in real-time from the receiver, updates as users tune
 - **Status indicator** — green dot for active, orange for idle
 
 No IP addresses are ever shown or collected.
@@ -17,19 +17,23 @@ No IP addresses are ever shown or collected.
 ## Screenshot
 
 ```
-┌─────────────────────────────────────────┐
-│  🎧 ②                                  │
-│  ┌───────────────────────────────────┐  │
-│  │ 🎧 Listeners                   ✕ │  │
-│  ├───┬───────────────┬──────────────┤  │
-│  │   │ Name          │   Frequency  │  │
-│  ├───┼───────────────┼──────────────┤  │
-│  │ 🟢│ Zoran         │ 14.205 MHz  │  │
-│  │ 🟢│ Marco         │  7.074 MHz  │  │
-│  │ 🟠│ Listener3     │  3.573 MHz  │  │
-│  └───┴───────────────┴──────────────┘  │
-└─────────────────────────────────────────┘
+ Help  🎧Listeners  Status  Chat  Receiver  Map  Files  Settings
+        ┌───────────────────────────────────┐
+        │ 🎧 Listeners                   ✕ │
+        ├───┬───────────────┬──────────────┤
+        │   │ Name          │   Frequency  │
+        ├───┼───────────────┼──────────────┤
+        │ 🟢│ Zoran         │ 14.205 MHz   │
+        │ 🟢│ Marco         │  7.074 MHz   │
+        │ 🟠│ Listener3     │  3.573 MHz   │
+        └───┴───────────────┴──────────────┘
 ```
+
+## How the frequency works
+
+The plugin reads the frequency directly from the `#webrx-actual-freq` element in the OWRX+ DOM. This is the same element that displays the frequency on screen. It updates every 2 seconds, so when a user changes frequency, the table updates automatically.
+
+For remote users (other clients), the plugin captures their names from WebSocket chat messages. Currently, the exact frequency of remote users can only be shown if OWRX+ broadcasts it via WebSocket — otherwise their name appears with "—" in the frequency column.
 
 ## Installation
 
@@ -73,10 +77,11 @@ Then copy the files and edit `init.js` as described above.
 Customize the plugin by setting options in `init.js` **before** loading the plugin:
 
 ```javascript
-Plugins.listeners_panel = Plugins.listeners_panel || {};
-Plugins.listeners_panel.refreshInterval = 5000;
-Plugins.listeners_panel.panelTitle = 'Who is listening?';
-Plugins.listeners_panel.maxListeners = 30;
+Plugins.listeners_panel = {
+  panelTitle:   'Who is listening?',
+  maxListeners: 30,
+  staleTimeout: 600000,  // 10 minutes before removing idle users
+};
 await Plugins.load('listeners_panel');
 ```
 
@@ -84,9 +89,9 @@ await Plugins.load('listeners_panel');
 
 | Option | Default | Description |
 |---|---|---|
-| `refreshInterval` | `3000` | How often to refresh frequency data (in ms) |
-| `panelTitle` | `Listeners` | Title shown in the panel header |
+| `panelTitle` | `Listeners` | Title shown on the button and panel header |
 | `maxListeners` | `50` | Maximum number of listeners displayed |
+| `staleTimeout` | `300000` | Milliseconds before removing idle listeners (default 5 min) |
 
 ### Full init.js example
 
@@ -110,27 +115,20 @@ await Plugins.load('listeners_panel');
 })();
 ```
 
-## How it works
-
-1. **WebSocket interception** — Captures chat messages and client info sent over the OWRX+ WebSocket
-2. **DOM observation** — Watches the chat panel for new messages and extracts usernames
-3. **Frequency detection** — Reads the current frequency from the OWRX+ interface (supports multiple methods)
-4. **Periodic refresh** — Updates every 3 seconds and removes inactive users after 5 minutes
-
 ## Privacy
 
 - ❌ Does **NOT** display IP addresses
 - ❌ Does **NOT** send data to external services
 - ✅ Only shows names from the chat
 - ✅ Only shows the current frequency
-- ✅ All data stays local
+- ✅ All data stays local in the browser
 
 ## Files
 
 ```
 listeners_panel/
-├── listeners_panel.js
-├── listeners_panel.css
+├── listeners_panel.js    # Plugin code
+├── listeners_panel.css   # Styles (loaded automatically)
 ├── LICENSE
 └── README.md
 ```
