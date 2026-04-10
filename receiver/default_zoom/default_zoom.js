@@ -2,6 +2,7 @@
  * default_zoom - Set default waterfall zoom level per SDR profile
  *
  * Automatically zooms the waterfall when a profile loads.
+ * Resets zoom when switching to a profile not in the config.
  * Users can still zoom in/out freely — this only sets the initial zoom.
  *
  * No dependencies required. Works standalone.
@@ -19,7 +20,6 @@
   //
   //  window.default_zoom_profiles = {
   //    'sdr_uuid|profile_uuid': 5,
-  //    '*': 3,
   //  };
   //  window.default_zoom_delay = 800;
   // ---------------------------------------------------------------
@@ -27,7 +27,7 @@
   var profiles = window.default_zoom_profiles || {};
   var delay    = window.default_zoom_delay    || 800;
 
-  var _last_applied = null;
+  var _last_profile = null;
 
   // --- Build profile ID string from currentprofile global ---
   function getProfileId() {
@@ -52,7 +52,7 @@
       return profiles[profileId];
     }
 
-    // 2. Substring match (e.g. just the profile UUID)
+    // 2. Substring match
     var keys = Object.keys(profiles);
     for (var i = 0; i < keys.length; i++) {
       if (keys[i] !== '*' && profileId.indexOf(keys[i]) !== -1) {
@@ -68,33 +68,38 @@
     return null;
   }
 
-  // --- Apply zoom ---
-  function applyZoom() {
+  // --- Handle profile change ---
+  function onProfileChange() {
     var profileId = getProfileId();
     if (!profileId) return;
-    if (profileId === _last_applied) return;
+    if (profileId === _last_profile) return;
 
+    _last_profile = profileId;
     var level = getZoomLevel(profileId);
-    if (level === null) return;
-
-    level = Math.max(0, Math.min(14, parseInt(level, 10)));
-    _last_applied = profileId;
 
     setTimeout(function () {
-      if (typeof zoom_set === 'function') {
+      if (typeof zoom_set !== 'function') return;
+
+      if (level !== null) {
+        // Profile is in config — apply configured zoom
+        level = Math.max(0, Math.min(14, parseInt(level, 10)));
         zoom_set(level);
-        console.log('[default_zoom] Zoom ' + level + ' applied for: ' + profileId);
+        console.log('[default_zoom] Zoom ' + level + ' for: ' + profileId);
+      } else {
+        // Profile is NOT in config — reset to no zoom
+        zoom_set(0);
+        console.log('[default_zoom] Reset zoom for: ' + profileId);
       }
     }, delay);
   }
 
-  // --- METHOD 1: Listen for profile dropdown changes ---
+  // --- Watch profile dropdown ---
   function watchDropdown() {
     var dropdown = document.getElementById('openwebrx-sdr-profiles-listbox');
     if (dropdown) {
       dropdown.addEventListener('change', function () {
-        _last_applied = null; // reset so zoom applies to new profile
-        applyZoom();
+        _last_profile = null;
+        onProfileChange();
       });
       console.log('[default_zoom] Watching profile dropdown.');
       return true;
@@ -102,29 +107,28 @@
     return false;
   }
 
-  // --- METHOD 2: Watch for DOM changes (backup) ---
+  // --- Wait for dropdown to appear ---
   function watchDOM() {
     var observer = new MutationObserver(function () {
       var dropdown = document.getElementById('openwebrx-sdr-profiles-listbox');
       if (dropdown) {
         observer.disconnect();
         watchDropdown();
-        applyZoom(); // apply for the initial profile
+        onProfileChange();
       }
     });
     observer.observe(document.body, { childList: true, subtree: true });
-    console.log('[default_zoom] Waiting for UI to load...');
   }
 
-  // --- METHOD 3: Poll for profile changes (failsafe) ---
+  // --- Polling failsafe ---
   function watchPoll() {
     var lastSeen = null;
     setInterval(function () {
       var id = getProfileId();
       if (id && id !== lastSeen) {
         lastSeen = id;
-        _last_applied = null;
-        applyZoom();
+        _last_profile = null;
+        onProfileChange();
       }
     }, 2000);
   }
@@ -138,19 +142,14 @@
     }
     console.log('[default_zoom] Loaded. ' + count + ' profile(s) configured.');
 
-    // Try dropdown first, fall back to DOM observer
     if (!watchDropdown()) {
       watchDOM();
     }
 
-    // Always enable polling as failsafe
     watchPoll();
-
-    // Apply for the initial profile after a short wait
-    setTimeout(applyZoom, delay + 500);
+    setTimeout(onProfileChange, delay + 500);
   }
 
-  // Run when DOM is ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', start);
   } else {
