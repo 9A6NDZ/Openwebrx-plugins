@@ -1,0 +1,203 @@
+/*
+ * DX Cluster Feed Plugin Styles for OpenWebRX+
+ * Table layout and controls — header inherits native theme styles.
+ */
+
+/* ---- Section wrapper ---- */
+.dx-cluster-section {
+  position: relative;
+  z-index: 1;
+}
+
+/* ---- Section body ---- */
+.dx-cluster-section-body {
+  padding: 3px 5px 5px 5px;
+}
+
+/* ---- Controls row (refresh, auto, band, timestamp) ---- */
+.dx-cluster-controls-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.dx-cluster-btn {
+  font-size: 10px !important;
+  padding: 2px 7px !important;
+  min-width: auto !important;
+  line-height: 1.4 !important;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.dx-cluster-btn.highlighted {
+  background-color: var(--theme-color1, #4A90D9) !important;
+  color: #FFF !important;
+}
+
+.dx-cluster-band-select {
+  background: rgba(0, 0, 0, 0.3);
+  color: #CCC;
+  border: 1px solid var(--theme-color2, rgba(255, 255, 255, 0.2));
+  border-radius: 3px;
+  font-size: 11px;
+  padding: 2px 4px;
+  min-width: 70px;
+  flex-shrink: 0;
+}
+.dx-cluster-band-select:focus {
+  outline: none;
+  border-color: var(--theme-color1, #4A90D9);
+}
+.dx-cluster-band-select option {
+  background: #333;
+  color: #CCC;
+}
+
+.dx-cluster-last-update {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.35);
+  margin-left: auto;
+  white-space: nowrap;
+  font-family: monospace;
+}
+
+/* ---- Status message (loading / error) ---- */
+.dx-cluster-status {
+  font-size: 11px;
+  padding: 4px 6px;
+  border-radius: 3px;
+  margin-bottom: 4px;
+}
+
+.dx-cluster-status-loading {
+  color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.dx-cluster-status-error {
+  color: #ff8888;
+  background: rgba(255, 80, 80, 0.08);
+  border: 1px solid rgba(255, 80, 80, 0.2);
+}
+
+/* ---- Scrollable table container ---- */
+.dx-cluster-table-wrap {
+  max-height: 220px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.dx-cluster-table-wrap::-webkit-scrollbar {
+  width: 5px;
+}
+.dx-cluster-table-wrap::-webkit-scrollbar-track {
+  background: transparent;
+}
+.dx-cluster-table-wrap::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+/* ---- Spots table ---- */
+.dx-cluster-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10px;
+  table-layout: fixed;
+}
+
+.dx-cluster-th {
+  background: rgba(0, 0, 0, 0.4);
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 9px;
+  font-weight: normal;
+  text-align: left;
+  padding: 2px 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Column widths */
+.dx-cluster-table th:nth-child(1),
+.dx-cluster-table td:nth-child(1) { width: 36px; }   /* Time */
+.dx-cluster-table th:nth-child(2),
+.dx-cluster-table td:nth-child(2) { width: 62px; }   /* DX Call */
+.dx-cluster-table th:nth-child(3),
+.dx-cluster-table td:nth-child(3) { width: 60px; }   /* Freq */
+.dx-cluster-table th:nth-child(4),
+.dx-cluster-table td:nth-child(4) { width: 62px; }   /* Spotter */
+.dx-cluster-table th:nth-child(5),
+.dx-cluster-table td:nth-child(5) { width: auto; }   /* Comment */
+
+.dx-cluster-td {
+  padding: 2px 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #CCC;
+}
+
+/* ---- Row styling ---- */
+.dx-cluster-row {
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  transition: background 0.1s;
+}
+
+.dx-cluster-row:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.dx-cluster-row:hover .dx-cluster-td {
+  color: #FFF;
+}
+
+/* Alternating row shading */
+.dx-cluster-row:nth-child(odd) {
+  background: rgba(0, 0, 0, 0.12);
+}
+.dx-cluster-row:nth-child(odd):hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+/* Highlighted columns */
+.dx-cluster-dxcall {
+  color: var(--theme-color1, #7AB8E8) !important;
+  font-weight: bold;
+}
+
+.dx-cluster-freq {
+  color: rgba(255, 220, 120, 0.9) !important;
+  font-family: monospace;
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 600px) {
+  .dx-cluster-table-wrap {
+    max-height: 160px;
+  }
+  .dx-cluster-table {
+    font-size: 9px;
+  }
+  .dx-cluster-th {
+    font-size: 8px;
+  }
+  /* Hide Comment column on small screens */
+  .dx-cluster-table th:nth-child(5),
+  .dx-cluster-table td:nth-child(5) {
+    display: none;
+  }
+}
