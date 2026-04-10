@@ -1,132 +1,160 @@
 /*
  * default_zoom - Set default waterfall zoom level per SDR profile
  *
- * Allows the admin to configure a default zoom level for each SDR profile
- * via init.js settings. When a profile loads, the waterfall automatically
- * zooms to the configured level. Users can still freely zoom in/out.
+ * Automatically zooms the waterfall when a profile loads.
+ * Users can still zoom in/out freely — this only sets the initial zoom.
+ *
+ * No dependencies required. Works standalone.
  *
  * License: MIT
  * Copyright (c) 2025 Zoran, 9A6NDZ
  * https://github.com/9A6NDZ/Openwebrx-plugins
  */
 
-Plugins.default_zoom.no_css = true;
-Plugins.default_zoom._version = 0.2;
+(function () {
+  'use strict';
 
-Plugins.default_zoom.init = function () {
-  // --- Dependency check ---
-  if (!Plugins.isLoaded('utils', 0.1)) {
-    console.error('[default_zoom] Requires utils >= 0.1');
-    return false;
-  }
+  // ---------------------------------------------------------------
+  //  CONFIGURATION — set these in init.js BEFORE loading this file
+  //
+  //  window.default_zoom_profiles = {
+  //    'sdr_uuid|profile_uuid': 5,
+  //    '*': 3,
+  //  };
+  //  window.default_zoom_delay = 800;
+  // ---------------------------------------------------------------
 
-  // --- Merge user settings with defaults ---
-  var settings = {
-    profiles: Plugins.default_zoom.profiles || {},
-    delay:    Plugins.default_zoom.delay    || 500,
-  };
+  var profiles = window.default_zoom_profiles || {};
+  var delay    = window.default_zoom_delay    || 800;
 
-  var _applied_profile = null;
+  var _last_applied = null;
 
-  // --- Helper: extract a profile ID string from various formats ---
-  function resolveProfileId(data) {
-    // Object with sdr_id and profile_id (OpenWebRX+ native format)
-    if (data && typeof data === 'object' && data.sdr_id && data.profile_id) {
-      return data.sdr_id + '|' + data.profile_id;
+  // --- Build profile ID string from currentprofile global ---
+  function getProfileId() {
+    if (typeof currentprofile === 'undefined' || !currentprofile) return null;
+    if (currentprofile.sdr_id && currentprofile.profile_id) {
+      return currentprofile.sdr_id + '|' + currentprofile.profile_id;
     }
-    // Object with toString method
-    if (data && typeof data === 'object' && typeof data.toString === 'function') {
-      var s = data.toString();
-      if (s && s !== '[object Object]') return s;
-    }
-    // Plain string
-    if (typeof data === 'string') return data;
-    // Fallback: read the global currentprofile
-    if (typeof currentprofile !== 'undefined' && currentprofile) {
-      if (currentprofile.sdr_id && currentprofile.profile_id) {
-        return currentprofile.sdr_id + '|' + currentprofile.profile_id;
-      }
-      if (typeof currentprofile === 'string') return currentprofile;
-      if (typeof currentprofile.toString === 'function') {
-        var cs = currentprofile.toString();
-        if (cs && cs !== '[object Object]') return cs;
-      }
+    if (typeof currentprofile === 'string') return currentprofile;
+    if (typeof currentprofile.toString === 'function') {
+      var s = currentprofile.toString();
+      if (s !== '[object Object]') return s;
     }
     return null;
   }
 
-  // --- Helper: look up the zoom level for a given profile ID ---
-  function getZoomForProfile(profileId) {
+  // --- Look up zoom level for a profile ID ---
+  function getZoomLevel(profileId) {
     if (!profileId) return null;
 
     // 1. Exact match
-    if (settings.profiles.hasOwnProperty(profileId)) {
-      return settings.profiles[profileId];
+    if (profiles.hasOwnProperty(profileId)) {
+      return profiles[profileId];
     }
 
-    // 2. Partial / substring match
-    var keys = Object.keys(settings.profiles);
+    // 2. Substring match (e.g. just the profile UUID)
+    var keys = Object.keys(profiles);
     for (var i = 0; i < keys.length; i++) {
       if (keys[i] !== '*' && profileId.indexOf(keys[i]) !== -1) {
-        return settings.profiles[keys[i]];
+        return profiles[keys[i]];
       }
     }
 
-    // 3. Wildcard fallback
-    if (settings.profiles.hasOwnProperty('*')) {
-      return settings.profiles['*'];
+    // 3. Wildcard
+    if (profiles.hasOwnProperty('*')) {
+      return profiles['*'];
     }
 
     return null;
   }
 
-  // --- Helper: apply zoom level safely ---
-  function applyZoom(level, profileId) {
-    if (level === null || level === undefined) return;
+  // --- Apply zoom ---
+  function applyZoom() {
+    var profileId = getProfileId();
+    if (!profileId) return;
+    if (profileId === _last_applied) return;
 
-    // Clamp to valid range (0 - 14)
+    var level = getZoomLevel(profileId);
+    if (level === null) return;
+
     level = Math.max(0, Math.min(14, parseInt(level, 10)));
+    _last_applied = profileId;
 
-    if (typeof zoom_set === 'function') {
-      zoom_set(level);
-      console.log('[default_zoom] Applied zoom level ' + level + ' for profile: ' + profileId);
-    } else {
-      console.warn('[default_zoom] zoom_set() not available');
-    }
+    setTimeout(function () {
+      if (typeof zoom_set === 'function') {
+        zoom_set(level);
+        console.log('[default_zoom] Zoom ' + level + ' applied for: ' + profileId);
+      }
+    }, delay);
   }
 
-  // --- React to profile switches ---
-  $(document).on('event:profile_changed', function (e, data) {
-    var profileId = resolveProfileId(data);
-    if (!profileId) return;
-
-    // Avoid re-applying for the same profile
-    if (profileId === _applied_profile) return;
-    _applied_profile = profileId;
-
-    var zoomLevel = getZoomForProfile(profileId);
-    if (zoomLevel !== null) {
-      setTimeout(function () {
-        applyZoom(zoomLevel, profileId);
-      }, settings.delay);
+  // --- METHOD 1: Listen for profile dropdown changes ---
+  function watchDropdown() {
+    var dropdown = document.getElementById('openwebrx-sdr-profiles-listbox');
+    if (dropdown) {
+      dropdown.addEventListener('change', function () {
+        _last_applied = null; // reset so zoom applies to new profile
+        applyZoom();
+      });
+      console.log('[default_zoom] Watching profile dropdown.');
+      return true;
     }
-  });
+    return false;
+  }
 
-  // --- Apply zoom on initial page load ---
-  Plugins.utils.on_ready(function () {
-    setTimeout(function () {
-      var profileId = resolveProfileId(null);
-      if (profileId) {
-        _applied_profile = profileId;
-        var zoomLevel = getZoomForProfile(profileId);
-        if (zoomLevel !== null) {
-          applyZoom(zoomLevel, profileId);
-        }
+  // --- METHOD 2: Watch for DOM changes (backup) ---
+  function watchDOM() {
+    var observer = new MutationObserver(function () {
+      var dropdown = document.getElementById('openwebrx-sdr-profiles-listbox');
+      if (dropdown) {
+        observer.disconnect();
+        watchDropdown();
+        applyZoom(); // apply for the initial profile
       }
-    }, settings.delay + 500);
-  });
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    console.log('[default_zoom] Waiting for UI to load...');
+  }
 
-  console.log('[default_zoom] Plugin loaded. Configured profiles:',
-    Object.keys(settings.profiles).length);
-  return true;
-};
+  // --- METHOD 3: Poll for profile changes (failsafe) ---
+  function watchPoll() {
+    var lastSeen = null;
+    setInterval(function () {
+      var id = getProfileId();
+      if (id && id !== lastSeen) {
+        lastSeen = id;
+        _last_applied = null;
+        applyZoom();
+      }
+    }, 2000);
+  }
+
+  // --- Start ---
+  function start() {
+    var count = Object.keys(profiles).length;
+    if (count === 0) {
+      console.warn('[default_zoom] No profiles configured. Set window.default_zoom_profiles in init.js');
+      return;
+    }
+    console.log('[default_zoom] Loaded. ' + count + ' profile(s) configured.');
+
+    // Try dropdown first, fall back to DOM observer
+    if (!watchDropdown()) {
+      watchDOM();
+    }
+
+    // Always enable polling as failsafe
+    watchPoll();
+
+    // Apply for the initial profile after a short wait
+    setTimeout(applyZoom, delay + 500);
+  }
+
+  // Run when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+
+})();

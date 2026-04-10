@@ -63,12 +63,11 @@ Then copy the file and edit `init.js` as described above.
 
 ## Configuration
 
-Set zoom levels per profile in `init.js` **before** loading the plugin:
+Set zoom levels in `init.js` **before** loading the plugin using `window.default_zoom_profiles`:
 
 ```javascript
-Plugins.default_zoom = Plugins.default_zoom || {};
-Plugins.default_zoom.profiles = {
-  'c8f69a96-...|1b7db61e-...':  6,   // specific profile by UUID
+window.default_zoom_profiles = {
+  'c8f69a96-...|1b7db61e-...':  5,   // specific profile by UUID
   '*':                          3,   // fallback for all others
 };
 await Plugins.load('default_zoom');
@@ -78,8 +77,8 @@ await Plugins.load('default_zoom');
 
 | Option | Default | Description |
 |---|---|---|
-| `profiles` | `{}` | Map of profile ID → zoom level (0–14) |
-| `delay` | `500` | Milliseconds to wait after profile switch before applying zoom. Increase on slow hardware. |
+| `window.default_zoom_profiles` | `{}` | Map of profile ID → zoom level (0–14) |
+| `window.default_zoom_delay` | `800` | Milliseconds to wait after profile switch before applying zoom |
 
 ### Profile ID format
 
@@ -94,8 +93,6 @@ For example:
 c8f69a96-50da-4151-acf4-1cc2a3f3985f|1b7db61e-3d3f-477b-91e8-672ec02879da
 ```
 
-You can find these in your `settings.json` or by using the browser console (see below).
-
 ### Profile ID matching
 
 The plugin matches in this order:
@@ -107,8 +104,8 @@ The plugin matches in this order:
 This means you can use just the profile UUID as a shortcut:
 
 ```javascript
-Plugins.default_zoom.profiles = {
-  '1b7db61e-3d3f-477b-91e8-672ec02879da': 5,  // matches any SDR with this profile
+window.default_zoom_profiles = {
+  '1b7db61e-3d3f-477b-91e8-672ec02879da': 5,
 };
 ```
 
@@ -135,30 +132,21 @@ Approximate visible bandwidth for a 2.4 MHz RTL-SDR setup:
 
 ### How to find your profile IDs
 
-**Option A — Browser console (easiest)**
-
 Open F12 → Console and type:
 
 ```javascript
 currentprofile.sdr_id + '|' + currentprofile.profile_id
 ```
 
-This prints the exact ID to use in your config.
+This prints the exact ID string to use in your config.
 
-**Option B — settings.json**
+Or check your settings file:
 
 ```bash
 cat /var/lib/openwebrx/settings.json | python3 -m json.tool
 ```
 
-Look for the UUID keys under `"sdrs"` → `"profiles"`.
-
-**Option C — Debug logging**
-
-Add to the top of your `init.js`:
-```javascript
-Plugins._enable_debug = true;
-```
+Look for the UUID keys under `"sdrs"` → device → `"profiles"`.
 
 ### Full init.js example
 
@@ -171,20 +159,26 @@ Plugins.load(rp_url + '/utils/utils.js').then(async function () {
   await Plugins.load(rp_url + '/notify/notify.js');
 
   // --- DEFAULT ZOOM ---
-  Plugins.default_zoom = Plugins.default_zoom || {};
-  Plugins.default_zoom.profiles = {
+  window.default_zoom_profiles = {
     'c8f69a96-50da-4151-acf4-1cc2a3f3985f|1b7db61e-3d3f-477b-91e8-672ec02879da': 5,  // RX04 HAM | 40M
-    // '*': 3,
+    // '*': 3,   // uncomment for a global fallback
   };
+  // window.default_zoom_delay = 800;
   await Plugins.load(my_url + '/default_zoom/default_zoom.js');
 
-  // Other plugins...
+  // --- OTHER PLUGINS ---
+  // await Plugins.load(rp_url + '/smeter/smeter.js');
+  // await Plugins.load(rp_url + '/doppler/doppler.js');
 })();
 ```
 
-## Dependencies
+## No dependencies
 
-- [utils](https://0xaf.github.io/openwebrxplus-plugins/receiver/utils) plugin (>= 0.1)
+This plugin is **fully standalone**. It does not require utils, notify, or any other plugin. It uses three detection methods to ensure it always works:
+
+1. **Dropdown listener** — watches the profile selector for changes
+2. **DOM observer** — waits for the UI to load if it's not ready yet
+3. **Polling failsafe** — checks for profile changes every 2 seconds
 
 ## Files
 
