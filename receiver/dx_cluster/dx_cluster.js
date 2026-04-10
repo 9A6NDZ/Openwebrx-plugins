@@ -12,14 +12,13 @@ Plugins.dx_cluster._version = 1.1;
 
 // ---- Configuration (can be overridden via Plugins.dx_cluster_config) ----
 Plugins.dx_cluster._defaultConfig = {
-  feedUrl:         'https://dxc.jo30.de/dxcache/spots',
+  feedUrl:         'https://web.cluster.iz3mez.it/spots.json/',
   fallbackUrls:    [
-    'https://dxlite.g7vjr.org/?json=1',
+    'https://web.cluster.iz3mez.it/spots.json/',
   ],
-  clusterHost:     'dxfun.com',
-  clusterPort:     8000,
+  clusterHost:     '',
+  clusterPort:     7300,
   callsign:        '',
-  proxyUrl:        '',
   refreshInterval: 60,
   maxSpots:        30,
   autoRefresh:     true,
@@ -166,6 +165,20 @@ Plugins.dx_cluster._parseGenericJson = function (data) {
   }).filter(function (s) { return s.dxCall && s.freq; });
 };
 
+Plugins.dx_cluster._parseIz3mez = function (data) {
+  var arr = Array.isArray(data) ? data : (data && Array.isArray(data.spots) ? data.spots : null);
+  if (!arr) return [];
+  return arr.map(function (s) {
+    return {
+      time:    s.spot_time || s.time || '',
+      dxCall:  s.spotted   || s.dx   || '',
+      freq:    s.frequency || s.freq || '',
+      spotter: s.spotter   || s.de   || '',
+      comment: s.spotted_country || s.comment || s.info || '',
+    };
+  }).filter(function (s) { return s.dxCall && s.freq; });
+};
+
 // ---- Fetch spots ----
 Plugins.dx_cluster._fetchSpots = function () {
   if (Plugins.dx_cluster._loading) return;
@@ -201,7 +214,9 @@ Plugins.dx_cluster._tryFetchFromUrls = function (urls, index) {
       try { data = JSON.parse(text); } catch (e) {
         throw new Error('Invalid JSON');
       }
-      var spots = Plugins.dx_cluster._parseDxlite(data);
+      // Try IZ3MEZ format first, then dxlite, then generic
+      var spots = Plugins.dx_cluster._parseIz3mez(data);
+      if (spots.length === 0) spots = Plugins.dx_cluster._parseDxlite(data);
       if (spots.length === 0) spots = Plugins.dx_cluster._parseGenericJson(data);
       if (spots.length === 0) throw new Error('No spots parsed');
 
@@ -539,7 +554,6 @@ Plugins.dx_cluster.init = function () {
   Plugins.dx_cluster._clusterHost     = cfg.clusterHost;
   Plugins.dx_cluster._clusterPort     = cfg.clusterPort;
   Plugins.dx_cluster._callsign        = cfg.callsign;
-  Plugins.dx_cluster._proxyUrl        = cfg.proxyUrl;
   Plugins.dx_cluster._refreshInterval = cfg.refreshInterval;
   Plugins.dx_cluster._maxSpots        = cfg.maxSpots;
   Plugins.dx_cluster._autoRefresh     = cfg.autoRefresh;

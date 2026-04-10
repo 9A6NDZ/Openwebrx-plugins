@@ -64,19 +64,18 @@ await Plugins.load('dx_cluster');
 (async () => {
   // Optional: configure before loading the plugin
   Plugins.dx_cluster_config = {
-    feedUrl:         'https://dxc.jo30.de/dxcache/spots', // Primary JSON feed URL
-    fallbackUrls:    [                                     // Fallback URLs tried if primary fails
-      'https://dxlite.g7vjr.org/?json=1',
+    feedUrl:         'https://web.cluster.iz3mez.it/spots.json/', // Primary JSON feed URL (CORS-enabled)
+    fallbackUrls:    [                                             // Fallback URLs tried if primary fails
+      'https://web.cluster.iz3mez.it/spots.json/',
     ],
-    clusterHost:     'dxfun.com',  // Telnet DX cluster hostname (for proxy/display)
+    clusterHost:     'dxfun.com',  // Telnet DX cluster hostname (for display)
     clusterPort:     8000,         // Telnet DX cluster port
-    callsign:        'N0CALL',     // Your callsign for proxy login
-    // proxyUrl:     'ws://localhost:8080/dxcluster', // WebSocket proxy URL (optional)
+    callsign:        '9A6NDZ',     // Your callsign
     refreshInterval: 60,           // Auto-refresh every 60 seconds
     maxSpots:        30,           // Maximum number of spots to display
     autoRefresh:     true,         // Enable auto-refresh on startup
     collapsed:       false,        // Start with the section expanded
-    band:            'all',        // Default band filter ('all' or e.g. '20m')
+    band:            '20m',        // Default band filter ('all' or e.g. '20m')
   };
 
   await Plugins.load('https://9a6ndz.github.io/Openwebrx-plugins/receiver/dx_cluster/dx_cluster.js');
@@ -107,12 +106,11 @@ await Plugins.load('dx_cluster');
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `feedUrl` | `https://dxc.jo30.de/dxcache/spots` | Primary JSON feed URL |
+| `feedUrl` | `https://web.cluster.iz3mez.it/spots.json/` | Primary JSON feed URL (CORS-enabled) |
 | `fallbackUrls` | `[...]` | Fallback feed URLs tried sequentially if primary fails |
-| `clusterHost` | `dxfun.com` | Telnet DX cluster hostname (for proxy/display) |
-| `clusterPort` | `8000` | Telnet DX cluster port |
-| `callsign` | `''` | Your callsign for proxy login |
-| `proxyUrl` | `''` | WebSocket proxy URL for live Telnet bridge |
+| `clusterHost` | `''` | Telnet DX cluster hostname (for display) |
+| `clusterPort` | `7300` | Telnet DX cluster port |
+| `callsign` | `''` | Your callsign |
 | `refreshInterval` | `60` | Auto-refresh interval in seconds |
 | `maxSpots` | `30` | Maximum spots to display |
 | `autoRefresh` | `true` | Enable auto-refresh on startup |
@@ -129,22 +127,29 @@ await Plugins.load('dx_cluster');
 | NC7J | `dxc.nc7j.com` | `7373` |
 | DL8LAS | `dl8las.dyndns.org` | `7300` |
 | WB3FFV | `dxc.wb3ffv.us` | `7300` |
+| DXSPOTS | `dxspots.com` | `7300` |
 | pyCluster | `pycluster.ai3i.net` | `7300` |
 
-> **Note:** Browsers cannot connect directly to Telnet clusters (TCP). The `clusterHost`/`clusterPort` settings are used for display in the UI and for authentication when using a WebSocket proxy (`proxyUrl`).
+> **Note:** Browsers cannot connect directly to Telnet clusters (TCP). The `clusterHost`/`clusterPort` settings are used for display in the UI.
+
+## Alternative JSON feeds
+
+| Feed | URL | CORS | Notes |
+|------|-----|------|-------|
+| IZ3MEZ ⭐ | `https://web.cluster.iz3mez.it/spots.json/` | ✅ Yes | Default, works from browser |
+| JO30.de | `https://dxc.jo30.de/dxcache/spots` | ❌ No | Needs proxy |
+| Self-hosted DXClusterAPI | `http://localhost:3000/spots` | ✅ Yes | Docker, see int2001/DXClusterAPI |
 
 ## Technical details
 
-The plugin fetches DX spots from `https://dxc.jo30.de/dxcache/spots` by default (v1.1+).
-If the primary URL fails, it automatically tries each URL in `fallbackUrls` sequentially until
-one succeeds. The parser handles multiple common JSON formats (`{spots:[...]}`, `{data:[...]}`,
-direct array).
+The plugin fetches DX spots from `https://web.cluster.iz3mez.it/spots.json/` by default — this is
+the only public DX cluster JSON feed with CORS headers enabled, so it works directly from a browser
+without any proxy. If the primary URL fails, it automatically tries each URL in `fallbackUrls`
+sequentially until one succeeds.
 
-If `proxyUrl` is configured, the plugin attempts a WebSocket connection first. This allows
-live data from a Telnet→WebSocket bridge (e.g. a small Node.js proxy on your OWRX+ server).
-On WebSocket close or error, it falls back to HTTP polling automatically.
-
-The cluster host/port info is shown in small text in the controls row when `clusterHost` is set.
+The parser tries IZ3MEZ format first (fields: `spotted`, `spotter`, `frequency`, `spot_time`,
+`spotted_country`), then falls back to dxlite format, then generic JSON shapes (`{spots:[...]}`,
+`{data:[...]}`, direct array).
 
 Frequency tuning uses the OWRX+ API with multiple fallback methods:
 
