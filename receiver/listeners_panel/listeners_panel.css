@@ -1,0 +1,270 @@
+/* ============================================================================
+   listeners_panel - OpenWebRX+ Plugin Styles
+   ============================================================================ */
+
+/* ---- Icon Button ---- */
+
+.listeners-icon-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: pointer;
+  padding: 4px 8px;
+  margin: 0 4px;
+  border-radius: 6px;
+  color: #b0bec5;
+  transition: color 0.2s, background 0.2s;
+  user-select: none;
+  -webkit-user-select: none;
+  vertical-align: middle;
+  z-index: 1000;
+}
+
+.listeners-icon-wrap:hover {
+  color: #4fc3f7;
+  background: rgba(79, 195, 247, 0.1);
+}
+
+.listeners-icon-wrap.active {
+  color: #4fc3f7;
+  background: rgba(79, 195, 247, 0.15);
+}
+
+/* Fixed fallback position if no header found */
+.listeners-icon-wrap.listeners-icon-fixed {
+  position: fixed;
+  top: 10px;
+  right: 60px;
+  z-index: 10000;
+  background: rgba(30, 36, 44, 0.92);
+  border: 1px solid rgba(79, 195, 247, 0.25);
+  border-radius: 8px;
+  padding: 6px 10px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.listeners-icon {
+  display: block;
+  width: 22px;
+  height: 22px;
+}
+
+/* ---- Badge ---- */
+
+.listeners-badge {
+  position: absolute;
+  top: -4px;
+  right: -2px;
+  min-width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e53935;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  border-radius: 99px;
+  padding: 0 4px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+
+/* ---- Panel ---- */
+
+.listeners-panel {
+  position: fixed;
+  z-index: 10001;
+  width: 320px;
+  max-height: 420px;
+  background: #1a1f28;
+  border: 1px solid rgba(79, 195, 247, 0.2);
+  border-radius: 10px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(79, 195, 247, 0.08) inset;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* ---- Panel Header ---- */
+
+.listeners-panel-header {
+  display: flex;
+  align-items: center;
+  padding: 10px 14px;
+  background: rgba(79, 195, 247, 0.08);
+  border-bottom: 1px solid rgba(79, 195, 247, 0.12);
+  color: #4fc3f7;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.listeners-panel-header span {
+  flex: 1;
+}
+
+.listeners-panel-close {
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  color: #78909c;
+  padding: 0 2px;
+  transition: color 0.15s;
+}
+
+.listeners-panel-close:hover {
+  color: #e53935;
+}
+
+/* ---- Table ---- */
+
+.listeners-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  color: #cfd8dc;
+}
+
+.listeners-table thead th {
+  padding: 7px 10px;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #607d8b;
+  border-bottom: 1px solid rgba(96, 125, 139, 0.15);
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.listeners-table tbody {
+  max-height: 320px;
+  overflow-y: auto;
+  display: block;
+  width: 100%;
+}
+
+.listeners-table thead,
+.listeners-table tbody tr {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+}
+
+.listeners-table tbody tr {
+  transition: background 0.15s;
+}
+
+.listeners-table tbody tr:hover {
+  background: rgba(79, 195, 247, 0.06);
+}
+
+.listeners-table tbody tr:not(:last-child) {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.listeners-table td {
+  padding: 8px 10px;
+  vertical-align: middle;
+}
+
+/* Column widths */
+.lp-col-status {
+  width: 28px;
+  text-align: center;
+}
+
+.lp-col-name {
+  width: auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+  color: #eceff1;
+}
+
+.lp-col-freq {
+  width: 120px;
+  text-align: right;
+  font-family: "SF Mono", "Cascadia Code", "Fira Code", "Consolas", monospace;
+  font-size: 11px;
+  color: #4fc3f7;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+}
+
+/* ---- Status Dot ---- */
+
+.lp-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #546e7a;
+}
+
+.lp-dot-active {
+  background: #66bb6a;
+  box-shadow: 0 0 6px rgba(102, 187, 106, 0.5);
+  animation: lp-pulse 2s ease-in-out infinite;
+}
+
+.lp-dot-idle {
+  background: #ffa726;
+}
+
+@keyframes lp-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ---- Empty State ---- */
+
+.listeners-empty {
+  padding: 28px 14px;
+  text-align: center;
+  color: #546e7a;
+  font-size: 12px;
+  font-style: italic;
+}
+
+/* ---- Scrollbar ---- */
+
+.listeners-table tbody::-webkit-scrollbar {
+  width: 5px;
+}
+
+.listeners-table tbody::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.listeners-table tbody::-webkit-scrollbar-thumb {
+  background: rgba(79, 195, 247, 0.2);
+  border-radius: 99px;
+}
+
+.listeners-table tbody::-webkit-scrollbar-thumb:hover {
+  background: rgba(79, 195, 247, 0.35);
+}
+
+/* ---- Responsive ---- */
+
+@media (max-width: 480px) {
+  .listeners-panel {
+    width: calc(100vw - 16px);
+    left: 8px !important;
+    right: 8px;
+  }
+
+  .lp-col-freq {
+    width: 95px;
+    font-size: 10px;
+  }
+}
