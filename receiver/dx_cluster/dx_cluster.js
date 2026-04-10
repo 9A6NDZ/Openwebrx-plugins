@@ -8,16 +8,23 @@
  */
 
 Plugins.dx_cluster = Plugins.dx_cluster || {};
-Plugins.dx_cluster._version = 1.0;
+Plugins.dx_cluster._version = 1.1;
 
 // ---- Configuration (can be overridden via Plugins.dx_cluster_config) ----
 Plugins.dx_cluster._defaultConfig = {
-  feedUrl:       'https://dxlite.g7vjr.org/?json=1',
-  refreshInterval: 60,   // seconds
-  maxSpots:      30,
-  autoRefresh:   true,
-  collapsed:     true,
-  band:          'all',
+  feedUrl:         'https://dxc.jo30.de/dxcache/spots',
+  fallbackUrls:    [
+    'https://dxlite.g7vjr.org/?json=1',
+  ],
+  clusterHost:     'dxfun.com',
+  clusterPort:     8000,
+  callsign:        '',
+  proxyUrl:        '',
+  refreshInterval: 60,
+  maxSpots:        30,
+  autoRefresh:     true,
+  collapsed:       true,
+  band:            'all',
 };
 
 // ---- State ----
@@ -165,7 +172,24 @@ Plugins.dx_cluster._fetchSpots = function () {
   Plugins.dx_cluster._loading = true;
   Plugins.dx_cluster._setStatus('loading');
 
-  var url = Plugins.dx_cluster._feedUrl;
+  var urls = [Plugins.dx_cluster._feedUrl];
+  var fallbacks = Plugins.dx_cluster._fallbackUrls || [];
+  for (var i = 0; i < fallbacks.length; i++) {
+    if (urls.indexOf(fallbacks[i]) === -1) urls.push(fallbacks[i]);
+  }
+
+  Plugins.dx_cluster._tryFetchFromUrls(urls, 0);
+};
+
+Plugins.dx_cluster._tryFetchFromUrls = function (urls, index) {
+  if (index >= urls.length) {
+    Plugins.dx_cluster._loading = false;
+    Plugins.dx_cluster._setStatus('error', 'All feed URLs failed');
+    return;
+  }
+
+  var url = urls[index];
+  console.log('[dx_cluster] Trying feed: ' + url);
 
   fetch(url, { cache: 'no-store' })
     .then(function (resp) {
@@ -175,20 +199,22 @@ Plugins.dx_cluster._fetchSpots = function () {
     .then(function (text) {
       var data;
       try { data = JSON.parse(text); } catch (e) {
-        throw new Error('Invalid JSON from feed');
+        throw new Error('Invalid JSON');
       }
       var spots = Plugins.dx_cluster._parseDxlite(data);
       if (spots.length === 0) spots = Plugins.dx_cluster._parseGenericJson(data);
+      if (spots.length === 0) throw new Error('No spots parsed');
+
       Plugins.dx_cluster._spots = spots;
       Plugins.dx_cluster._lastUpdate = new Date();
       Plugins.dx_cluster._loading = false;
       Plugins.dx_cluster._renderSpots();
-      console.log('[dx_cluster] Fetched ' + spots.length + ' spots from feed.');
+      console.log('[dx_cluster] Fetched ' + spots.length + ' spots from ' + url);
     })
     .catch(function (err) {
-      Plugins.dx_cluster._loading = false;
-      console.warn('[dx_cluster] Feed fetch error:', err);
-      Plugins.dx_cluster._setStatus('error', err.message);
+      console.warn('[dx_cluster] Feed failed (' + url + '): ' + err.message);
+      // Try next fallback
+      Plugins.dx_cluster._tryFetchFromUrls(urls, index + 1);
     });
 };
 
@@ -291,6 +317,63 @@ Plugins.dx_cluster._stopAutoRefresh = function () {
   }
 };
 
+// ---- WebSocket proxy ----
+Plugins.dx_cluster._wsConnection = null;
+
+Plugins.dx_cluster._connectProxy = function () {
+  var proxyUrl = Plugins.dx_cluster._proxyUrl;
+  if (!proxyUrl) return false;
+
+  try {
+    var ws = new WebSocket(proxyUrl);
+
+    ws.onopen = function () {
+      console.log('[dx_cluster] WebSocket proxy connected: ' + proxyUrl);
+      // Send callsign for cluster login if configured.
+      // Most Telnet→WebSocket bridges expect just the callsign string
+      // (e.g. 'N0CALL') as the first message to authenticate.
+      if (Plugins.dx_cluster._callsign) {
+        ws.send(Plugins.dx_cluster._callsign);
+      }
+    };
+
+    ws.onmessage = function (event) {
+      try {
+        var data = JSON.parse(event.data);
+        var spots = Plugins.dx_cluster._parseDxlite(data);
+        if (spots.length === 0) spots = Plugins.dx_cluster._parseGenericJson(data);
+        if (spots.length > 0) {
+          Plugins.dx_cluster._spots = spots;
+          Plugins.dx_cluster._lastUpdate = new Date();
+          Plugins.dx_cluster._renderSpots();
+        }
+      } catch (e) {
+        console.warn('[dx_cluster] WebSocket parse error:', e);
+      }
+    };
+
+    ws.onerror = function (err) {
+      console.warn('[dx_cluster] WebSocket error:', err);
+    };
+
+    ws.onclose = function () {
+      console.log('[dx_cluster] WebSocket closed, falling back to HTTP polling');
+      Plugins.dx_cluster._wsConnection = null;
+      // Fall back to HTTP polling
+      Plugins.dx_cluster._fetchSpots();
+      if (Plugins.dx_cluster._autoRefresh) {
+        Plugins.dx_cluster._startAutoRefresh();
+      }
+    };
+
+    Plugins.dx_cluster._wsConnection = ws;
+    return true;
+  } catch (e) {
+    console.warn('[dx_cluster] WebSocket connection failed:', e);
+    return false;
+  }
+};
+
 // ---- UI Building ----
 Plugins.dx_cluster._buildUI = function () {
   var panel = $('#openwebrx-panel-receiver');
@@ -384,6 +467,16 @@ Plugins.dx_cluster._buildUI = function () {
   });
 
   controlsRow.append(refreshBtn, autoRefreshBtn, bandSelect, lastUpdateEl);
+
+  if (Plugins.dx_cluster._clusterHost) {
+    var clusterInfo = $('<span>', {
+      'class': 'dx-cluster-info',
+      text: Plugins.dx_cluster._clusterHost + ':' + Plugins.dx_cluster._clusterPort,
+      title: 'Configured DX cluster server',
+    });
+    controlsRow.append(clusterInfo);
+  }
+
   body.append(controlsRow);
 
   // Status message (loading / error)
@@ -442,6 +535,11 @@ Plugins.dx_cluster.init = function () {
   // Apply defaults
   var cfg = Plugins.dx_cluster._defaultConfig;
   Plugins.dx_cluster._feedUrl         = cfg.feedUrl;
+  Plugins.dx_cluster._fallbackUrls    = cfg.fallbackUrls;
+  Plugins.dx_cluster._clusterHost     = cfg.clusterHost;
+  Plugins.dx_cluster._clusterPort     = cfg.clusterPort;
+  Plugins.dx_cluster._callsign        = cfg.callsign;
+  Plugins.dx_cluster._proxyUrl        = cfg.proxyUrl;
   Plugins.dx_cluster._refreshInterval = cfg.refreshInterval;
   Plugins.dx_cluster._maxSpots        = cfg.maxSpots;
   Plugins.dx_cluster._autoRefresh     = cfg.autoRefresh;
@@ -452,6 +550,11 @@ Plugins.dx_cluster.init = function () {
   if (typeof Plugins.dx_cluster_config === 'object') {
     var ext = Plugins.dx_cluster_config;
     if (ext.feedUrl         !== undefined) Plugins.dx_cluster._feedUrl         = ext.feedUrl;
+    if (ext.fallbackUrls    !== undefined) Plugins.dx_cluster._fallbackUrls    = ext.fallbackUrls;
+    if (ext.clusterHost     !== undefined) Plugins.dx_cluster._clusterHost     = ext.clusterHost;
+    if (ext.clusterPort     !== undefined) Plugins.dx_cluster._clusterPort     = ext.clusterPort;
+    if (ext.callsign        !== undefined) Plugins.dx_cluster._callsign        = ext.callsign;
+    if (ext.proxyUrl        !== undefined) Plugins.dx_cluster._proxyUrl        = ext.proxyUrl;
     if (ext.refreshInterval !== undefined) Plugins.dx_cluster._refreshInterval = ext.refreshInterval;
     if (ext.maxSpots        !== undefined) Plugins.dx_cluster._maxSpots        = ext.maxSpots;
     if (ext.autoRefresh     !== undefined) Plugins.dx_cluster._autoRefresh     = ext.autoRefresh;
@@ -470,10 +573,22 @@ Plugins.dx_cluster.init = function () {
   }
 
   Plugins.dx_cluster._buildUI();
-  Plugins.dx_cluster._fetchSpots();
 
-  if (Plugins.dx_cluster._autoRefresh) {
-    Plugins.dx_cluster._startAutoRefresh();
+  // Try WebSocket proxy first
+  if (Plugins.dx_cluster._proxyUrl) {
+    var wsConnected = Plugins.dx_cluster._connectProxy();
+    if (!wsConnected) {
+      // Fallback to HTTP
+      Plugins.dx_cluster._fetchSpots();
+      if (Plugins.dx_cluster._autoRefresh) {
+        Plugins.dx_cluster._startAutoRefresh();
+      }
+    }
+  } else {
+    Plugins.dx_cluster._fetchSpots();
+    if (Plugins.dx_cluster._autoRefresh) {
+      Plugins.dx_cluster._startAutoRefresh();
+    }
   }
 
   console.log('[dx_cluster] Plugin initialized (v' + Plugins.dx_cluster._version + ')');
