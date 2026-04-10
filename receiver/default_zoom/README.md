@@ -68,9 +68,8 @@ Set zoom levels per profile in `init.js` **before** loading the plugin:
 ```javascript
 Plugins.default_zoom = Plugins.default_zoom || {};
 Plugins.default_zoom.profiles = {
-  'rtlsdr|20m':  6,   // ~350 kHz visible
-  'rtlsdr|40m':  5,   // ~500 kHz visible
-  'rtlsdr|FM':   0,   // no zoom, full bandwidth
+  'c8f69a96-...|1b7db61e-...':  6,   // specific profile by UUID
+  '*':                          3,   // fallback for all others
 };
 await Plugins.load('default_zoom');
 ```
@@ -82,13 +81,36 @@ await Plugins.load('default_zoom');
 | `profiles` | `{}` | Map of profile ID → zoom level (0–14) |
 | `delay` | `500` | Milliseconds to wait after profile switch before applying zoom. Increase on slow hardware. |
 
+### Profile ID format
+
+OpenWebRX+ uses UUIDs internally. The profile ID used by this plugin is:
+
+```
+<sdr_uuid>|<profile_uuid>
+```
+
+For example:
+```
+c8f69a96-50da-4151-acf4-1cc2a3f3985f|1b7db61e-3d3f-477b-91e8-672ec02879da
+```
+
+You can find these in your `settings.json` or by using the browser console (see below).
+
 ### Profile ID matching
 
 The plugin matches in this order:
 
-1. **Exact match** — `'rtlsdr|20m'` matches profile ID `rtlsdr|20m`
-2. **Substring match** — `'20m'` matches any profile containing `20m`
+1. **Exact match** — full `sdr_uuid|profile_uuid` string
+2. **Substring match** — any part of the ID (e.g. just the profile UUID)
 3. **Wildcard** — `'*'` matches all profiles not matched above
+
+This means you can use just the profile UUID as a shortcut:
+
+```javascript
+Plugins.default_zoom.profiles = {
+  '1b7db61e-3d3f-477b-91e8-672ec02879da': 5,  // matches any SDR with this profile
+};
+```
 
 ### Zoom level reference
 
@@ -113,43 +135,48 @@ Approximate visible bandwidth for a 2.4 MHz RTL-SDR setup:
 
 ### How to find your profile IDs
 
-Open the browser console (F12) and switch profiles. Look for:
-```
-[default_zoom] Applied zoom level: 6
+**Option A — Browser console (easiest)**
+
+Open F12 → Console and type:
+
+```javascript
+currentprofile.sdr_id + '|' + currentprofile.profile_id
 ```
 
-Or enable full debug logging:
+This prints the exact ID to use in your config.
+
+**Option B — settings.json**
+
+```bash
+cat /var/lib/openwebrx/settings.json | python3 -m json.tool
+```
+
+Look for the UUID keys under `"sdrs"` → `"profiles"`.
+
+**Option C — Debug logging**
+
+Add to the top of your `init.js`:
 ```javascript
 Plugins._enable_debug = true;
-Plugins.utils._DEBUG_ALL_EVENTS = true;
-```
-
-Or check your settings file:
-```bash
-cat /var/lib/openwebrx/settings.json | python3 -m json.tool | grep -A2 '"profiles"'
 ```
 
 ### Full init.js example
 
 ```javascript
-(async () => {
-  await Plugins.load('https://0xaf.github.io/openwebrxplus-plugins/receiver/utils/utils.js');
-  await Plugins.load('https://0xaf.github.io/openwebrxplus-plugins/receiver/notify/notify.js');
+const rp_url = 'https://0xaf.github.io/openwebrxplus-plugins/receiver';
+const my_url = 'https://9a6ndz.github.io/Openwebrx-plugins/receiver';
 
-  // Default zoom
+Plugins.load(rp_url + '/utils/utils.js').then(async function () {
+
+  await Plugins.load(rp_url + '/notify/notify.js');
+
+  // --- DEFAULT ZOOM ---
   Plugins.default_zoom = Plugins.default_zoom || {};
   Plugins.default_zoom.profiles = {
-    'rtlsdr|20m':     6,
-    'rtlsdr|40m':     5,
-    'rtlsdr|80m':     4,
-    'rtlsdr|2m':      3,
-    'rtlsdr|70cm':    3,
-    'rtlsdr|FM':      0,
-    'rtlsdr|Airband': 4,
-    // '*':            3,   // uncomment for a global fallback
+    'c8f69a96-50da-4151-acf4-1cc2a3f3985f|1b7db61e-3d3f-477b-91e8-672ec02879da': 5,  // RX04 HAM | 40M
+    // '*': 3,
   };
-  // Plugins.default_zoom.delay = 500;
-  await Plugins.load('https://9a6ndz.github.io/Openwebrx-plugins/receiver/default_zoom/default_zoom.js');
+  await Plugins.load(my_url + '/default_zoom/default_zoom.js');
 
   // Other plugins...
 })();

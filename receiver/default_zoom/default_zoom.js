@@ -11,7 +11,7 @@
  */
 
 Plugins.default_zoom.no_css = true;
-Plugins.default_zoom._version = 0.1;
+Plugins.default_zoom._version = 0.2;
 
 Plugins.default_zoom.init = function () {
   // --- Dependency check ---
@@ -27,6 +27,33 @@ Plugins.default_zoom.init = function () {
   };
 
   var _applied_profile = null;
+
+  // --- Helper: extract a profile ID string from various formats ---
+  function resolveProfileId(data) {
+    // Object with sdr_id and profile_id (OpenWebRX+ native format)
+    if (data && typeof data === 'object' && data.sdr_id && data.profile_id) {
+      return data.sdr_id + '|' + data.profile_id;
+    }
+    // Object with toString method
+    if (data && typeof data === 'object' && typeof data.toString === 'function') {
+      var s = data.toString();
+      if (s && s !== '[object Object]') return s;
+    }
+    // Plain string
+    if (typeof data === 'string') return data;
+    // Fallback: read the global currentprofile
+    if (typeof currentprofile !== 'undefined' && currentprofile) {
+      if (currentprofile.sdr_id && currentprofile.profile_id) {
+        return currentprofile.sdr_id + '|' + currentprofile.profile_id;
+      }
+      if (typeof currentprofile === 'string') return currentprofile;
+      if (typeof currentprofile.toString === 'function') {
+        var cs = currentprofile.toString();
+        if (cs && cs !== '[object Object]') return cs;
+      }
+    }
+    return null;
+  }
 
   // --- Helper: look up the zoom level for a given profile ID ---
   function getZoomForProfile(profileId) {
@@ -54,40 +81,23 @@ Plugins.default_zoom.init = function () {
   }
 
   // --- Helper: apply zoom level safely ---
-  function applyZoom(level) {
+  function applyZoom(level, profileId) {
     if (level === null || level === undefined) return;
 
-    // Clamp to valid range (0 – 14)
+    // Clamp to valid range (0 - 14)
     level = Math.max(0, Math.min(14, parseInt(level, 10)));
 
     if (typeof zoom_set === 'function') {
       zoom_set(level);
-      console.log('[default_zoom] Applied zoom level:', level);
-    } else if (typeof zoom_level !== 'undefined' && typeof zoom_step === 'function') {
-      // Fallback: step from current level
-      var current = zoom_level || 0;
-      var diff = level - current;
-      for (var i = 0; i < Math.abs(diff); i++) {
-        zoom_step(diff > 0 ? 1 : -1);
-      }
-      console.log('[default_zoom] Applied zoom via stepping:', level);
+      console.log('[default_zoom] Applied zoom level ' + level + ' for profile: ' + profileId);
     } else {
-      console.warn('[default_zoom] zoom_set / zoom_step not available yet');
+      console.warn('[default_zoom] zoom_set() not available');
     }
   }
 
   // --- React to profile switches ---
   $(document).on('event:profile_changed', function (e, data) {
-    var profileId = null;
-
-    if (typeof data === 'string') {
-      profileId = data;
-    } else if (data && data.profile) {
-      profileId = data.profile;
-    } else if (typeof currentprofile !== 'undefined') {
-      profileId = currentprofile;
-    }
-
+    var profileId = resolveProfileId(data);
     if (!profileId) return;
 
     // Avoid re-applying for the same profile
@@ -96,9 +106,8 @@ Plugins.default_zoom.init = function () {
 
     var zoomLevel = getZoomForProfile(profileId);
     if (zoomLevel !== null) {
-      // Short delay so the waterfall has time to resize after the profile switch
       setTimeout(function () {
-        applyZoom(zoomLevel);
+        applyZoom(zoomLevel, profileId);
       }, settings.delay);
     }
   });
@@ -106,15 +115,15 @@ Plugins.default_zoom.init = function () {
   // --- Apply zoom on initial page load ---
   Plugins.utils.on_ready(function () {
     setTimeout(function () {
-      var profileId = (typeof currentprofile !== 'undefined') ? currentprofile : null;
+      var profileId = resolveProfileId(null);
       if (profileId) {
         _applied_profile = profileId;
         var zoomLevel = getZoomForProfile(profileId);
         if (zoomLevel !== null) {
-          applyZoom(zoomLevel);
+          applyZoom(zoomLevel, profileId);
         }
       }
-    }, settings.delay + 500); // extra buffer for the first load
+    }, settings.delay + 500);
   });
 
   console.log('[default_zoom] Plugin loaded. Configured profiles:',
