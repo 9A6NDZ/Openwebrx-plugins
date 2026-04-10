@@ -8,18 +8,20 @@ A plugin that sets the **default waterfall zoom level per SDR profile**. No more
 
 When a profile loads, the waterfall automatically zooms to your configured level. Each profile can have its own zoom setting. Users can still zoom in and out freely — this only sets the *initial* zoom.
 
+When switching to a profile that is not in the config, the zoom resets to full bandwidth automatically.
+
 Perfect for RTL-SDR setups where you run a wide sample rate (e.g. 2.4 MHz) but only want to display a narrower portion of the spectrum by default.
 
 ## Screenshot
 
 ```
-Without plugin:                          With plugin (zoom level 6):
+Without plugin:                          With plugin (zoom level 5):
 ┌───────────────────────────────┐        ┌───────────────────────────────┐
 │ ▓░▒▓░░░▒▓▓░░▒░░░▓▓▒░░▒▓░▒▓░ │        │                               │
 │ ░▒▓▓░░▒░▓▓░▒░▓░▒▓░░▒▓░▒░░▒░ │        │      ▓▓▒▒▓▓░░▒▒▓▓▒▒▓▓        │
 │ ▓░░▒▓░▒░░▓▓▒░▒▓░░▒▓░▒▓▒░░▒▓ │        │      ░▒▓▓░░▒▒▓▓░░▒▒▓▓        │
 │ ░▒▓░▒▓░░▒░▓▓░▒░▒▓░▒▓░░▒▓░▒░ │        │      ▓▓▒░░▒▓▓▒▒░░▒▓▓▒        │
-│◄──────── 2.4 MHz ──────────► │        │      ◄──── ~350 kHz ────►      │
+│◄──────── 2.4 MHz ──────────► │        │      ◄──── ~500 kHz ────►      │
 │  full bandwidth, no zoom      │        │  zoomed to your band of interest│
 └───────────────────────────────┘        └───────────────────────────────┘
 ```
@@ -67,11 +69,12 @@ Set zoom levels in `init.js` **before** loading the plugin using `window.default
 
 ```javascript
 window.default_zoom_profiles = {
-  'c8f69a96-...|1b7db61e-...':  5,   // specific profile by UUID
-  '*':                          3,   // fallback for all others
+  'c8f69a96-50da-4151-acf4-1cc2a3f3985f|1b7db61e-3d3f-477b-91e8-672ec02879da': 5,
 };
-await Plugins.load('default_zoom');
+await Plugins.load('https://9a6ndz.github.io/Openwebrx-plugins/receiver/default_zoom/default_zoom.js');
 ```
+
+Only profiles listed in the config will be zoomed. All other profiles automatically reset to full bandwidth (zoom level 0).
 
 ### Options
 
@@ -132,21 +135,55 @@ Approximate visible bandwidth for a 2.4 MHz RTL-SDR setup:
 
 ### How to find your profile IDs
 
-Open F12 → Console and type:
+Open your browser's developer console (F12 → Console tab) while OpenWebRX+ is running. Switch to the profile you want to configure, then use these commands:
+
+**Get the ready-to-use profile ID string:**
 
 ```javascript
 currentprofile.sdr_id + '|' + currentprofile.profile_id
 ```
 
-This prints the exact ID string to use in your config.
+This prints the exact string to copy into your config, e.g.:
+```
+'c8f69a96-50da-4151-acf4-1cc2a3f3985f|1b7db61e-3d3f-477b-91e8-672ec02879da'
+```
 
-Or check your settings file:
+**See all profile details at once:**
+
+```javascript
+currentprofile
+```
+
+This shows the full profile object with all properties:
+```
+{
+  sdr_id: 'c8f69a96-50da-4151-acf4-1cc2a3f3985f',
+  profile_id: '1b7db61e-3d3f-477b-91e8-672ec02879da',
+  toString: ƒ
+}
+```
+
+**Check the current zoom level:**
+
+```javascript
+zoom_level
+```
+
+**Test a zoom level before adding it to your config:**
+
+```javascript
+zoom_set(5)
+```
+
+This lets you try different zoom levels live to find the one you like, then put that number in your config.
+
+**Alternative: check settings.json on the server:**
 
 ```bash
 cat /var/lib/openwebrx/settings.json | python3 -m json.tool
 ```
 
-Look for the UUID keys under `"sdrs"` → device → `"profiles"`.
+Look for the UUID keys under `"sdrs"` → device → `"profiles"`. The SDR UUID is the key under `"sdrs"`, and the profile UUID is the key under `"profiles"`.
 
 ### Full init.js example
 
@@ -161,24 +198,16 @@ Plugins.load(rp_url + '/utils/utils.js').then(async function () {
   // --- DEFAULT ZOOM ---
   window.default_zoom_profiles = {
     'c8f69a96-50da-4151-acf4-1cc2a3f3985f|1b7db61e-3d3f-477b-91e8-672ec02879da': 5,  // RX04 HAM | 40M
-    // '*': 3,   // uncomment for a global fallback
   };
-  // window.default_zoom_delay = 800;
   await Plugins.load(my_url + '/default_zoom/default_zoom.js');
 
-  // --- OTHER PLUGINS ---
-  // await Plugins.load(rp_url + '/smeter/smeter.js');
-  // await Plugins.load(rp_url + '/doppler/doppler.js');
+  // Other plugins...
 })();
 ```
 
 ## No dependencies
 
-This plugin is **fully standalone**. It does not require utils, notify, or any other plugin. It uses three detection methods to ensure it always works:
-
-1. **Dropdown listener** — watches the profile selector for changes
-2. **DOM observer** — waits for the UI to load if it's not ready yet
-3. **Polling failsafe** — checks for profile changes every 2 seconds
+This plugin is **fully standalone**. It does not require utils, notify, or any other plugin.
 
 ## Files
 
