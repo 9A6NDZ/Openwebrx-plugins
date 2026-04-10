@@ -64,6 +64,14 @@
   font-family: monospace;
 }
 
+.dx-cluster-info {
+  font-size: 8px;
+  color: rgba(255, 255, 255, 0.25);
+  font-family: monospace;
+  white-space: nowrap;
+  margin-left: 4px;
+}
+
 /* ---- Status message (loading / error) ---- */
 .dx-cluster-status {
   font-size: 11px;
