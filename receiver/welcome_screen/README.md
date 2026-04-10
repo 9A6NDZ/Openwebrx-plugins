@@ -14,12 +14,12 @@ When someone opens your OpenWebRX+ receiver, a fullscreen overlay appears with y
 ┌─────────────────────────────────────────┐
 │                                         │
 │                                         │
-│        Welcome to 9A6NDZ SDR            │
+│        Welcome to my OWRX SDR           │
 │                                         │
-│          Čuvaj HAM duh!                 │
-│              PAZI!                      │
-│          Deca slušaju.                  │
-│         Budi za primer!                 │
+│     Thank you for visiting!             │
+│     Please be respectful to             │
+│     other listeners on this             │
+│     shared receiver.                    │
 │                                         │
 │            [ START ]                    │
 │                                         │
@@ -70,8 +70,8 @@ Customize the overlay by setting options in `init.js` **before** loading the plu
 
 ```javascript
 Plugins.welcome_screen_config = {
-  title:      'Welcome to 9A6NDZ SDR',
-  subtitle:   'Čuvaj HAM duh!<br>PAZI!<br>Deca slušaju.<br>Budi za primer!',
+  title:      'Welcome to my OWRX SDR',
+  subtitle:   'Thank you for visiting!<br>Please be respectful to other listeners.',
   buttonText: 'START',
 };
 await Plugins.load('welcome_screen');
@@ -94,8 +94,8 @@ await Plugins.load('welcome_screen');
 
   // Welcome screen
   Plugins.welcome_screen_config = {
-    title:      'Welcome to 9A6NDZ SDR',
-    subtitle:   'Čuvaj HAM duh!<br>PAZI!<br>Deca slušaju.<br>Budi za primer!',
+    title:      'Welcome to my OWRX SDR',
+    subtitle:   'Thank you for visiting!<br>Please be respectful to other listeners.',
     buttonText: 'START',
   };
   await Plugins.load('https://9a6ndz.github.io/Openwebrx-plugins/receiver/welcome_screen/welcome_screen.js');
