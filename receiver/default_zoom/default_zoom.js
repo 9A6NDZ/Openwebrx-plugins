@@ -1,12 +1,6 @@
 /*
  * default_zoom - Set default waterfall zoom level per SDR profile
  *
- * Automatically zooms the waterfall when a configured profile loads.
- * Resets zoom to 0 when switching to a profile not in the config.
- * Users can still zoom in/out freely after the initial zoom.
- *
- * No dependencies required. Works standalone.
- *
  * License: MIT
  * Copyright (c) 2025 Zoran, 9A6NDZ
  * https://github.com/9A6NDZ/Openwebrx-plugins
@@ -16,10 +10,7 @@
   'use strict';
 
   var profiles = window.default_zoom_profiles || {};
-  var delay    = window.default_zoom_delay    || 100;
-
-  var _last_profile = null;
-  var _initialized  = false;
+  var delay    = window.default_zoom_delay    || 800;
 
   function getProfileId() {
     if (typeof currentprofile === 'undefined' || !currentprofile) return null;
@@ -41,15 +32,13 @@
     return null;
   }
 
-  function applyForCurrentProfile() {
-    var profileId = getProfileId();
-    if (!profileId || profileId === _last_profile) return;
-    _last_profile = profileId;
-
-    var level = getZoomLevel(profileId);
-
+  function applyZoom() {
     setTimeout(function () {
+      var profileId = getProfileId();
+      if (!profileId) return;
       if (typeof zoom_set !== 'function') return;
+
+      var level = getZoomLevel(profileId);
       if (level !== null) {
         level = Math.max(0, Math.min(14, parseInt(level, 10)));
         zoom_set(level);
@@ -61,43 +50,51 @@
     }, delay);
   }
 
-  function start() {
-    if (_initialized) return;
-    _initialized = true;
+  function watchDropdown() {
+    var dropdown = document.getElementById('openwebrx-sdr-profiles-listbox');
+    if (dropdown) {
+      dropdown.addEventListener('change', function () {
+        applyZoom();
+      });
+      console.log('[default_zoom] Watching profile dropdown.');
+      return true;
+    }
+    return false;
+  }
 
+  function watchDOM() {
+    var observer = new MutationObserver(function () {
+      var dropdown = document.getElementById('openwebrx-sdr-profiles-listbox');
+      if (dropdown) {
+        observer.disconnect();
+        watchDropdown();
+        applyZoom();
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    console.log('[default_zoom] Waiting for UI...');
+  }
+
+  function start() {
     var count = Object.keys(profiles).length;
     if (count === 0) {
       console.warn('[default_zoom] No profiles configured.');
       return;
     }
+    console.log('[default_zoom] Loaded. ' + count + ' profile(s).');
 
-    // Watch dropdown for profile changes
-    var dropdown = document.getElementById('openwebrx-sdr-profiles-listbox');
-    if (dropdown) {
-      dropdown.addEventListener('change', function () {
-        _last_profile = null;
-        applyForCurrentProfile();
-      });
+    if (!watchDropdown()) {
+      watchDOM();
     }
 
     // Apply for initial profile
-    applyForCurrentProfile();
-
-    console.log('[default_zoom] Loaded. ' + count + ' profile(s).');
+    applyZoom();
   }
 
-  // Wait for dropdown to exist, then start
-  var observer = new MutationObserver(function () {
-    if (document.getElementById('openwebrx-sdr-profiles-listbox')) {
-      observer.disconnect();
-      start();
-    }
-  });
-
-  if (document.getElementById('openwebrx-sdr-profiles-listbox')) {
-    start();
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
   } else {
-    observer.observe(document.body || document.documentElement, { childList: true, subtree: true });
+    start();
   }
 
 })();
